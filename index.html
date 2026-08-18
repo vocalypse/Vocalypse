@@ -1,3 +1,63 @@
+# Vocalypse — Scripts Roblox Premium
+
+Site de vente de scripts **Roblox uniquement**, avec système de prix par durée :
+
+- **1 Jour**
+- **1 Semaine**
+- **1 Mois**
+
+## Fonctionnalités
+
+- Nom du site : **Vocalypse**
+- Uniquement des scripts Roblox
+- 3 tarifs par script (jour / semaine / mois)
+- Panier fonctionnel
+- Design dark moderne
+- Responsive (mobile + desktop)
+- Livraison instantanée (simulée)
+
+## Comment ouvrir le site
+
+1. Ouvre le fichier `index.html` dans ton navigateur
+2. Ou héberge-le sur Netlify / Vercel / GitHub Pages
+
+## Personnaliser les prix et scripts
+
+Ouvre `index.html` → cherche le tableau `const products = [...]`
+
+Chaque script a cette structure :
+
+```js
+{
+    id: 1,
+    name: "Admin System Pro",
+    category: "admin",
+    description: "...",
+    icon: "fas fa-shield-halved",
+    color: "from-violet-500 to-purple-600",
+    tags: ["Admin", "Commands"],
+    prices: { 
+        day: 2.99,    // prix 1 jour
+        week: 7.99,   // prix 1 semaine
+        month: 14.99  // prix 1 mois
+    }
+}
+```
+
+Tu peux facilement modifier les prix, ajouter/supprimer des scripts, changer les noms, etc.
+
+## Catégories disponibles
+
+- Admin
+- Utility
+- Combat
+- Systems
+- UI
+
+---
+
+Créé pour toi.
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -139,6 +199,9 @@
                 </div>
                 
                 <div class="flex items-center gap-3">
+                    <a href="https://discord.gg/EzxtpshXX" target="_blank" class="p-2.5 rounded-lg bg-dark-700 hover:bg-indigo-600 transition group" title="Discord Support">
+                        <i class="fab fa-discord text-stone-300 group-hover:text-white"></i>
+                    </a>
                     <button onclick="toggleCart()" class="relative p-2.5 rounded-lg bg-dark-700 hover:bg-dark-600 transition group">
                         <i class="fas fa-shopping-cart text-stone-300 group-hover:text-white"></i>
                         <span id="cart-count" class="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center justify-center hidden">0</span>
@@ -337,7 +400,7 @@
                             </div>
                             <div>
                                 <span class="font-medium text-white">Support Discord</span>
-                                <p class="text-sm text-stone-400">Aide rapide en cas de probleme.</p>
+                                <p class="text-sm text-stone-400"><a href="https://discord.gg/EzxtpshXX" target="_blank" class="text-orange-300 hover:underline">discord.gg/EzxtpshXX</a> — aide rapide.</p>
                             </div>
                         </li>
                     </ul>
@@ -407,15 +470,15 @@ print(<span class="text-emerald-400">"✓ Vocalypse charge avec succes"</span>)<
                 </div>
                 
                 <div>
-                    <h4 class="font-semibold text-white mb-4">Contact</h4>
+                    <h4 class="font-semibold text-white mb-4">Contact & Support</h4>
                     <ul class="space-y-2 text-sm text-stone-400">
                         <li class="flex items-center gap-2">
                             <i class="fab fa-discord text-orange-400"></i>
-                            Discord : Vocalypse
+                            <a href="https://discord.gg/EzxtpshXX" target="_blank" class="hover:text-orange-300 transition">Discord Support</a>
                         </li>
                         <li class="flex items-center gap-2">
-                            <i class="fas fa-envelope text-orange-400"></i>
-                            support@vocalypse.com
+                            <i class="fas fa-headset text-orange-400"></i>
+                            <a href="https://discord.gg/EzxtpshXX" target="_blank" class="hover:text-orange-300 transition">Besoin d'aide ? Rejoins le Discord</a>
                         </li>
                     </ul>
                 </div>
@@ -530,7 +593,7 @@ print(<span class="text-emerald-400">"✓ Vocalypse charge avec succes"</span>)<
                 
                 <p class="text-xs text-stone-500 text-center">
                     Cle unique - non partageable (1 utilisateur max).<br>
-                    L'argent va vers le compte de mon cheri. Support Discord si probleme.
+                    L'argent va vers le compte de mon cheri. <a href="https://discord.gg/EzxtpshXX" target="_blank" class="text-orange-300 underline">Support Discord</a> si probleme.
                 </p>
             </div>
             
