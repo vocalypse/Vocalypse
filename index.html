@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocalypse — Scripts Roblox Premium</title>
+    <meta name="description" content="Achetez des scripts Roblox premium : acces 1 jour, 1 semaine ou 1 mois. Qualite et mises a jour garanties.">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            400: '#fb923c',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                        },
+                        dark: {
+                            900: '#0c0a09',
+                            800: '#1c1917',
+                            700: '#292524',
+                            600: '#44403c',
+                            500: '#57534e',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { background: #0c0a09; color: #e2e8f0; }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #fb923c 0%, #22d3ee 50%, #fb923c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .card-glow {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(249, 115, 22, 0.12);
+        }
+        .card-glow:hover {
+            border-color: rgba(249, 115, 22, 0.45);
+            box-shadow: 0 0 28px rgba(249, 115, 22, 0.12);
+            transform: translateY(-4px);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            box-shadow: 0 0 20px rgba(234, 88, 12, 0.4);
+            transform: translateY(-1px);
+        }
+        
+        .hero-bg {
+            background: 
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(234, 88, 12, 0.22), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 50%, rgba(34, 211, 238, 0.07), transparent);
+        }
+        
+        .nav-blur {
+            backdrop-filter: blur(16px);
+            background: rgba(10, 10, 15, 0.82);
+            border-bottom: 1px solid rgba(249, 115, 22, 0.1);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+        }
+        .modal.active { display: flex; }
+        
+        .price-btn {
+            transition: all 0.2s ease;
+            border: 1px solid rgba(249, 115, 22, 0.25);
+        }
+        .price-btn:hover, .price-btn.active {
+            background: rgba(234, 88, 12, 0.25);
+            border-color: #ea580c;
+            color: #e9d5ff;
+        }
+        
+        .category-pill {
+            transition: all 0.2s ease;
+        }
+        .category-pill:hover, .category-pill.active {
+            background: rgba(234, 88, 12, 0.2);
+            border-color: #ea580c;
+            color: #c4b5fd;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0c0a09; }
+        ::-webkit-scrollbar-thumb { background: #9a3412; border-radius: 4px; }
+    </style>
+</head>
+<body class="font-sans antialiased">
+
+    <!-- NAVBAR -->
+    <nav class="fixed top-0 left-0 right-0 z-50 nav-blur">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="#" class="flex items-center gap-2.5 group">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 via-orange-500 to-yellow-400 flex items-center justify-center shadow-lg shadow-orange-500/30">
+                        <i class="fas fa-gamepad text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold tracking-tight">
+                        Vocal<span class="gradient-text">ypse</span>
+                    </span>
+                </a>
+                
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#produits" class="text-sm font-medium text-stone-300 hover:text-white transition">Scripts</a>
+                    <a href="#categories" class="text-sm font-medium text-stone-300 hover:text-white transition">Categories</a>
+                    <a href="#comment" class="text-sm font-medium text-stone-300 hover:text-white transition">Comment ca marche</a>
+                    <a href="#contact" class="text-sm font-medium text-stone-300 hover:text-white transition">Contact</a>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleCart()" class="relative p-2.5 rounded-lg bg-dark-700 hover:bg-dark-600 transition group">
+                        <i class="fas fa-shopping-cart text-stone-300 group-hover:text-white"></i>
+                        <span id="cart-count" class="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center justify-center hidden">0</span>
+                    </button>
+                    <a href="#produits" class="hidden sm:inline-flex btn-primary text-white text-sm font-semibold px-4 py-2 rounded-lg">
+                        Voir les scripts
+                    </a>
+                    <button id="mobile-menu-btn" class="md:hidden p-2.5 rounded-lg bg-dark-700 hover:bg-dark-600">
+                        <i class="fas fa-bars text-stone-300"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="mobile-menu" class="hidden md:hidden pb-4 border-t border-dark-600 mt-2 pt-3 space-y-2">
+                <a href="#produits" class="block px-3 py-2 text-sm text-stone-300 hover:text-white rounded-lg hover:bg-dark-700">Scripts</a>
+                <a href="#categories" class="block px-3 py-2 text-sm text-stone-300 hover:text-white rounded-lg hover:bg-dark-700">Categories</a>
+                <a href="#comment" class="block px-3 py-2 text-sm text-stone-300 hover:text-white rounded-lg hover:bg-dark-700">Comment ca marche</a>
+                <a href="#contact" class="block px-3 py-2 text-sm text-stone-300 hover:text-white rounded-lg hover:bg-dark-700">Contact</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero-bg pt-28 pb-20 sm:pt-36 sm:pb-28">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-300 text-sm font-medium mb-6">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Scripts Roblox - Acces limite dans le temps
+            </div>
+            
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-6">
+                Scripts Roblox <span class="gradient-text">premium</span><br>
+                pour 1 jour, 1 semaine ou 1 mois
+            </h1>
+            
+            <p class="text-lg sm:text-xl text-stone-400 max-w-2xl mx-auto mb-10">
+                Scripts Gakuran : ESP, NoClip, Fly, Emote...<br>
+                Cle liee a <strong>1 seule personne</strong> - non partageable.
+            </p>
+            
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="#produits" class="btn-primary text-white font-semibold px-8 py-3.5 rounded-xl text-base shadow-lg shadow-orange-600/25 w-full sm:w-auto">
+                    <i class="fas fa-rocket mr-2"></i> Voir les scripts
+                </a>
+                <a href="#comment" class="px-8 py-3.5 rounded-xl font-semibold text-stone-300 border border-dark-500 hover:border-orange-500/50 hover:text-white transition w-full sm:w-auto">
+                    Comment ca marche ?
+                </a>
+            </div>
+            
+            <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
+                <div class="text-center">
+                    <div class="text-2xl sm:text-3xl font-bold text-white">9</div>
+                    <div class="text-sm text-stone-500 mt-1">Scripts</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl sm:text-3xl font-bold text-white">3</div>
+                    <div class="text-sm text-stone-500 mt-1">Durees</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl sm:text-3xl font-bold text-white">Visa + PayPal</div>
+                    <div class="text-sm text-stone-500 mt-1">Paiement</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl sm:text-3xl font-bold text-white">Instant</div>
+                    <div class="text-sm text-stone-500 mt-1">Livraison</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CATEGORIES -->
+    <section id="categories" class="py-12 border-t border-dark-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl sm:text-3xl font-bold mb-2">Categories</h2>
+                <p class="text-stone-400">Scripts specialises pour le jeu Gakuran - Cle unique par utilisateur</p>
+            </div>
+            
+            <div class="flex flex-wrap justify-center gap-3" id="category-filters">
+                <button onclick="filterProducts('all')" class="category-pill active px-5 py-2.5 rounded-full border border-dark-500 text-sm font-medium text-stone-300" data-cat="all">Tous</button>
+                <button onclick="filterProducts('gakuran')" class="category-pill px-5 py-2.5 rounded-full border border-dark-500 text-sm font-medium text-stone-300" data-cat="gakuran">
+                    <i class="fas fa-gamepad mr-1.5"></i> Gakuran
+                </button>
+                <button onclick="filterProducts('utility')" class="category-pill px-5 py-2.5 rounded-full border border-dark-500 text-sm font-medium text-stone-300" data-cat="utility">
+                    <i class="fas fa-plane mr-1.5"></i> Fly / NoClip
+                </button>
+                <button onclick="filterProducts('visual')" class="category-pill px-5 py-2.5 rounded-full border border-dark-500 text-sm font-medium text-stone-300" data-cat="visual">
+                    <i class="fas fa-eye mr-1.5"></i> ESP / Visual
+                </button>
+                <button onclick="filterProducts('emote')" class="category-pill px-5 py-2.5 rounded-full border border-dark-500 text-sm font-medium text-stone-300" data-cat="emote">
+                    <i class="fas fa-music mr-1.5"></i> Emote
+                </button>
+                <button onclick="filterProducts('full')" class="category-pill px-5 py-2.5 rounded-full border border-dark-500 text-sm font-medium text-stone-300" data-cat="full">
+                    <i class="fas fa-star mr-1.5"></i> Full Script
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- PRODUCTS -->
+    <section id="produits" class="py-10 pb-24">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mb-10">
+                <h2 class="text-2xl sm:text-3xl font-bold mb-2">Scripts Gakuran</h2>
+                <p class="text-stone-400">ESP • NoClip • Fly • Emote • et plus — Cle 1 personne uniquement</p>
+            </div>
+            
+            <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section id="comment" class="py-20 bg-dark-800/50 border-y border-dark-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-14">
+                <h2 class="text-2xl sm:text-3xl font-bold mb-3">Comment ca marche ?</h2>
+                <p class="text-stone-400 max-w-xl mx-auto">Simple, rapide et transparent</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="text-center p-6">
+                    <div class="w-14 h-14 mx-auto mb-5 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center">
+                        <span class="text-2xl font-bold text-orange-400">1</span>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-2">Choisis ton script + duree</h3>
+                    <p class="text-stone-400 text-sm leading-relaxed">
+                        Selectionne le script et la duree : 1 jour, 1 semaine ou 1 mois.
+                    </p>
+                </div>
+                
+                <div class="text-center p-6">
+                    <div class="w-14 h-14 mx-auto mb-5 rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center">
+                        <span class="text-2xl font-bold text-cyan-400">2</span>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-2">Paye par Visa ou PayPal</h3>
+                    <p class="text-stone-400 text-sm leading-relaxed">
+                        Paiement securise. L'argent est envoye vers le compte de mon cheri.
+                    </p>
+                </div>
+                
+                <div class="text-center p-6">
+                    <div class="w-14 h-14 mx-auto mb-5 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+                        <span class="text-2xl font-bold text-emerald-400">3</span>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-2">Utilise pendant ta duree</h3>
+                    <p class="text-stone-400 text-sm leading-relaxed">
+                        Acces complet (ESP, Fly, NoClip...). Cle bloquee pour 1 seul utilisateur.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-bold mb-5">Pourquoi Vocalypse ?</h2>
+                    <p class="text-stone-400 mb-8 leading-relaxed">
+                        Scripts Gakuran avec ESP, NoClip, Fly, Emote et plus. Chaque cle est bloquee pour 1 seul utilisateur (anti-share).
+                    </p>
+                    
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-3">
+                            <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <i class="fas fa-check text-emerald-400 text-xs"></i>
+                            </div>
+                            <div>
+                                <span class="font-medium text-white">Cle unique (1 personne)</span>
+                                <p class="text-sm text-stone-400">Non partageable. Bloquee sur un seul utilisateur / PC.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <i class="fas fa-check text-emerald-400 text-xs"></i>
+                            </div>
+                            <div>
+                                <span class="font-medium text-white">Livraison instantanee</span>
+                                <p class="text-sm text-stone-400">Cle envoyee automatiquement apres paiement.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <i class="fas fa-check text-emerald-400 text-xs"></i>
+                            </div>
+                            <div>
+                                <span class="font-medium text-white">Mises a jour incluses</span>
+                                <p class="text-sm text-stone-400">Pendant toute la duree de ton acces.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <i class="fas fa-check text-emerald-400 text-xs"></i>
+                            </div>
+                            <div>
+                                <span class="font-medium text-white">Support Discord</span>
+                                <p class="text-sm text-stone-400">Aide rapide en cas de probleme.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="relative">
+                    <div class="bg-dark-800 border border-dark-600 rounded-2xl p-6 font-mono text-sm">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="ml-3 text-xs text-stone-500">vocalypse_loader.lua</span>
+                        </div>
+                        <pre class="leading-relaxed text-stone-300 overflow-x-auto"><code><span class="text-purple-400">local</span> Vocalypse = <span class="text-cyan-300">loadstring</span>(game:HttpGet(<span class="text-emerald-400">"..."</span>))()
+
+Vocalypse:Init({
+    key = <span class="text-emerald-400">"TON_CLE_ICI"</span>,
+    script = <span class="text-emerald-400">"AdminSystem"</span>
+})
+
+<span class="text-stone-500">-- Acces valide - Duree restante affichee</span>
+print(<span class="text-emerald-400">"✓ Vocalypse charge avec succes"</span>)</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-16">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="relative rounded-3xl bg-gradient-to-br from-red-600/20 to-yellow-500/10 border border-orange-500/20 p-10 sm:p-14 overflow-hidden">
+                <h2 class="text-2xl sm:text-3xl font-bold mb-4">Pret a tester ?</h2>
+                <p class="text-stone-300 mb-8 max-w-lg mx-auto">
+                    Commence par un acces 1 jour si tu veux essayer, ou prends 1 mois pour plus d'economies.
+                </p>
+                <a href="#produits" class="btn-primary inline-flex items-center text-white font-semibold px-8 py-3.5 rounded-xl shadow-lg shadow-orange-600/30">
+                    <i class="fas fa-shopping-bag mr-2"></i> Voir tous les scripts
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer id="contact" class="border-t border-dark-700 pt-16 pb-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-10 mb-12">
+                <div class="md:col-span-2">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 via-orange-500 to-yellow-400 flex items-center justify-center">
+                            <i class="fas fa-gamepad text-white text-xs"></i>
+                        </div>
+                        <span class="text-lg font-bold">Vocal<span class="gradient-text">ypse</span></span>
+                    </div>
+                    <p class="text-stone-400 text-sm leading-relaxed max-w-sm">
+                        Scripts Gakuran premium (ESP, NoClip, Fly, Emote...). Cles non partageables. Paiements Visa &amp; PayPal vers le compte de mon cheri.
+                    </p>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold text-white mb-4">Liens</h4>
+                    <ul class="space-y-2 text-sm text-stone-400">
+                        <li><a href="#produits" class="hover:text-orange-300 transition">Tous les scripts</a></li>
+                        <li><a href="#categories" class="hover:text-orange-300 transition">Categories</a></li>
+                        <li><a href="#comment" class="hover:text-orange-300 transition">Comment ca marche</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-semibold text-white mb-4">Contact</h4>
+                    <ul class="space-y-2 text-sm text-stone-400">
+                        <li class="flex items-center gap-2">
+                            <i class="fab fa-discord text-orange-400"></i>
+                            Discord : Vocalypse
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <i class="fas fa-envelope text-orange-400"></i>
+                            support@vocalypse.com
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-dark-700 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p class="text-sm text-stone-500">© 2026 Vocalypse. Tous droits reserves.</p>
+                <div class="flex items-center gap-4 text-sm text-stone-500">
+                    <a href="#" class="hover:text-stone-300 transition">CGV</a>
+                    <a href="#" class="hover:text-stone-300 transition">Confidentialite</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- CART MODAL -->
+    <div id="cart-modal" class="modal items-center justify-center p-4">
+        <div class="bg-dark-800 border border-dark-600 rounded-2xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+            <div class="flex items-center justify-between p-5 border-b border-dark-600">
+                <h3 class="text-lg font-semibold flex items-center gap-2">
+                    <i class="fas fa-shopping-cart text-orange-400"></i> Panier
+                </h3>
+                <button onclick="toggleCart()" class="p-2 rounded-lg hover:bg-dark-600 transition">
+                    <i class="fas fa-times text-stone-400"></i>
+                </button>
+            </div>
+            
+            <div id="cart-items" class="flex-1 overflow-y-auto p-5 space-y-4">
+            </div>
+            
+            <div class="p-5 border-t border-dark-600 bg-dark-900/50 space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-stone-400">Total</span>
+                    <span id="cart-total" class="text-xl font-bold text-white">0,00 €</span>
+                </div>
+                
+                <div>
+                    <p class="text-sm text-stone-400 mb-2">Moyen de paiement :</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="pay-option selected rounded-xl p-3 flex items-center gap-2 border-2 border-orange-500/40 bg-orange-500/10 cursor-pointer" data-method="visa" onclick="selectPayment(this)">
+                            <i class="fab fa-cc-visa text-2xl text-blue-400"></i>
+                            <span class="text-sm font-medium">Visa / Card</span>
+                        </div>
+                        <div class="pay-option rounded-xl p-3 flex items-center gap-2 border-2 border-stone-600 cursor-pointer" data-method="paypal" onclick="selectPayment(this)">
+                            <i class="fab fa-paypal text-2xl text-blue-500"></i>
+                            <span class="text-sm font-medium">PayPal</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <p class="text-xs text-stone-500 text-center">
+                    L'argent sera envoye vers le compte de mon cheri.
+                </p>
+                
+                <button onclick="checkout()" class="btn-primary w-full text-white font-semibold py-3 rounded-xl">
+                    <i class="fas fa-lock mr-2"></i> Payer maintenant
+                </button>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- SUCCESS / DELIVERY MODAL -->
+    <div id="success-modal" class="modal items-center justify-center p-4">
+        <div class="bg-dark-800 border border-orange-500/30 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <div class="p-6 text-center border-b border-dark-600">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-red-500 via-orange-500 to-yellow-400 flex items-center justify-center">
+                    <i class="fas fa-check text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-1">Paiement confirme !</h3>
+                <p class="text-stone-400 text-sm">Merci pour ton achat. Voici ton acces.</p>
+            </div>
+            
+            <div class="p-6 space-y-5 overflow-y-auto">
+                <div class="bg-dark-900 rounded-xl p-4 border border-dark-600">
+                    <p class="text-xs text-stone-500 mb-1">Script achete</p>
+                    <p id="success-script-name" class="font-semibold text-white">Admin System Pro</p>
+                    <p id="success-duration" class="text-sm text-orange-300">1 Semaine</p>
+                </div>
+                
+                <div>
+                    <p class="text-sm font-medium text-stone-300 mb-2">Ta cle d'acces :</p>
+                    <div class="flex gap-2">
+                        <input id="success-key" type="text" readonly value="VOCAL-XXXX-XXXX-XXXX" 
+                            class="flex-1 bg-dark-900 border border-dark-600 rounded-lg px-4 py-3 text-sm font-mono text-yellow-300 focus:outline-none">
+                        <button onclick="copyKey()" class="btn-primary px-4 rounded-lg text-white text-sm font-semibold">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div>
+                    <p class="text-sm font-medium text-stone-300 mb-2">Script a coller dans Xeno / ton executor :</p>
+                    <div class="bg-dark-900 border border-dark-600 rounded-xl p-4 relative">
+                        <pre id="success-loadstring" class="text-xs text-green-400 font-mono overflow-x-auto whitespace-pre-wrap break-all">loadstring(game:HttpGet("https://vocalypse.com/loader"))()</pre>
+                        <button onclick="copyLoadstring()" class="absolute top-2 right-2 text-xs bg-dark-700 hover:bg-dark-600 px-2 py-1 rounded text-stone-300">
+                            <i class="fas fa-copy mr-1"></i> Copier
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="bg-orange-500/10 border border-orange-500/25 rounded-xl p-4 text-sm text-stone-300">
+                    <p class="font-semibold text-orange-300 mb-2"><i class="fas fa-info-circle mr-1"></i> Comment utiliser :</p>
+                    <ol class="list-decimal list-inside space-y-1 text-stone-400">
+                        <li>Ouvre <strong class="text-white">Xeno</strong> (ou ton executor)</li>
+                        <li>Colle le script ci-dessus</li>
+                        <li>Execute → entre ta cle quand demande</li>
+                        <li>Profite de ton acces !</li>
+                    </ol>
+                    <p class="mt-3 text-xs text-red-300"><i class="fas fa-lock mr-1"></i> Cle liee a 1 seule personne. Si partagee, elle sera desactivee.</p>
+                </div>
+                
+                <p class="text-xs text-stone-500 text-center">
+                    Cle unique - non partageable (1 utilisateur max).<br>
+                    L'argent va vers le compte de mon cheri. Support Discord si probleme.
+                </p>
+            </div>
+            
+            <div class="p-5 border-t border-dark-600">
+                <button onclick="closeSuccess()" class="btn-primary w-full text-white font-semibold py-3 rounded-xl">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed bottom-6 right-6 z-[110] transform translate-y-20 opacity-0 transition-all duration-300">
+        <div class="bg-dark-700 border border-emerald-500/30 text-white px-5 py-3 rounded-xl shadow-xl flex items-center gap-3">
+            <i class="fas fa-check-circle text-emerald-400"></i>
+            <span id="toast-message">Ajoute au panier</span>
+        </div>
+    </div>
+
+    <script>
+        const products = [
+            {
+                id: 1,
+                name: "Gakuran Full Script",
+                category: "gakuran",
+                description: "Script complet pour Gakuran : ESP, NoClip, Fly, Emote, Speed, Infinite Jump et plus. Cle liee a 1 seul utilisateur.",
+                icon: "fas fa-gamepad",
+                color: "from-red-500 to-orange-500",
+                tags: ["ESP", "NoClip", "Fly", "Emote"],
+                prices: { day: 2.99, week: 7.99, month: 14.99 }
+            },
+            {
+                id: 2,
+                name: "Gakuran ESP Pro",
+                category: "visual",
+                description: "ESP joueurs + objets pour Gakuran. Distance, noms, sante, team check. Non partageable (1 PC).",
+                icon: "fas fa-eye",
+                color: "from-orange-500 to-yellow-500",
+                tags: ["ESP", "Tracer", "Gakuran"],
+                prices: { day: 1.99, week: 5.49, month: 10.99 }
+            },
+            {
+                id: 3,
+                name: "Fly + NoClip Pack",
+                category: "utility",
+                description: "Fly fluide + NoClip pour Gakuran. Vitesse reglable, anti-detection basique. Cle unique par personne.",
+                icon: "fas fa-plane",
+                color: "from-red-600 to-orange-400",
+                tags: ["Fly", "NoClip", "Speed"],
+                prices: { day: 1.99, week: 5.99, month: 11.99 }
+            },
+            {
+                id: 4,
+                name: "Gakuran Emote Menu",
+                category: "emote",
+                description: "Menu d'emotes personnalise pour Gakuran. Animations, dances et emotes exclusives. 1 utilisateur max.",
+                icon: "fas fa-music",
+                color: "from-yellow-500 to-orange-400",
+                tags: ["Emote", "Animations", "Gakuran"],
+                prices: { day: 1.49, week: 4.99, month: 9.99 }
+            },
+            {
+                id: 5,
+                name: "Gakuran Utility Hub",
+                category: "full",
+                description: "Hub complet : ESP, Fly, NoClip, Emote, Speed, Teleport, Infinite Jump. Tout-en-un pour Gakuran. Anti-share.",
+                icon: "fas fa-star",
+                color: "from-red-500 to-yellow-500",
+                tags: ["ESP", "Fly", "NoClip", "Emote"],
+                prices: { day: 3.99, week: 9.99, month: 18.99 }
+            },
+            {
+                id: 6,
+                name: "NoClip Advanced",
+                category: "utility",
+                description: "NoClip avance pour Gakuran. Passe a travers les murs et objets. Cle bloquee sur 1 seul appareil.",
+                icon: "fas fa-ghost",
+                color: "from-orange-600 to-amber-500",
+                tags: ["NoClip", "Gakuran"],
+                prices: { day: 1.49, week: 4.49, month: 8.99 }
+            },
+            {
+                id: 7,
+                name: "Gakuran Speed + Jump",
+                category: "utility",
+                description: "Speed hack + Infinite Jump optimises pour Gakuran. Controles simples. Non partageable.",
+                icon: "fas fa-bolt",
+                color: "from-yellow-500 to-red-500",
+                tags: ["Speed", "Jump", "Gakuran"],
+                prices: { day: 1.99, week: 5.49, month: 10.49 }
+            },
+            {
+                id: 8,
+                name: "ESP + Emote Combo",
+                category: "visual",
+                description: "ESP joueurs + menu Emote pour Gakuran. Voir tout le monde et animer librement. Cle 1 personne.",
+                icon: "fas fa-eye",
+                color: "from-orange-500 to-red-400",
+                tags: ["ESP", "Emote", "Gakuran"],
+                prices: { day: 2.49, week: 6.99, month: 13.49 }
+            },
+            {
+                id: 9,
+                name: "Gakuran Premium All-in-One",
+                category: "gakuran",
+                description: "Le pack ultime pour Gakuran : ESP, NoClip, Fly, Emote, Speed, Teleport, Anti-AFK. Cle unique, non partageable.",
+                icon: "fas fa-crown",
+                color: "from-red-500 via-orange-500 to-yellow-400",
+                tags: ["ESP", "NoClip", "Fly", "Emote", "Full"],
+                prices: { day: 4.99, week: 12.99, month: 24.99 }
+            }
+        ];
+
+        let cart = JSON.parse(localStorage.getItem('vocalypse_cart') || '[]');
+        let currentFilter = 'all';
+        let selectedDuration = {};
+        let selectedPayment = 'visa';
+
+        products.forEach(p => selectedDuration[p.id] = 'week');
+
+        function selectPayment(el) {
+            document.querySelectorAll('.pay-option').forEach(o => {
+                o.classList.remove('selected', 'border-orange-500/40', 'bg-orange-500/10');
+                o.classList.add('border-stone-600');
+            });
+            el.classList.add('selected', 'border-orange-500/40', 'bg-orange-500/10');
+            el.classList.remove('border-stone-600');
+            selectedPayment = el.dataset.method;
+        }
+
+        function formatPrice(price) {
+            return price.toFixed(2).replace('.', ',') + ' €';
+        }
+
+        function getDurationLabel(dur) {
+            return { day: '1 Jour', week: '1 Semaine', month: '1 Mois' }[dur];
+        }
+
+        function renderProducts(filter = 'all') {
+            const grid = document.getElementById('products-grid');
+            const filtered = filter === 'all' ? products : products.filter(p => p.category === filter);
+            
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-16 text-stone-500">Aucun script dans cette categorie.</div>';
+                return;
+            }
+            
+            grid.innerHTML = filtered.map(p => {
+                const dur = selectedDuration[p.id] || 'week';
+                const price = p.prices[dur];
+                
+                return `
+                <div class="card-glow bg-dark-800 rounded-2xl overflow-hidden group" data-category="${p.category}">
+                    <div class="h-32 bg-gradient-to-br ${p.color} relative flex items-center justify-center">
+                        <i class="${p.icon} text-5xl text-white/90 drop-shadow-lg"></i>
+                        <div class="absolute top-3 right-3">
+                            <span class="px-2.5 py-1 rounded-full bg-black/30 backdrop-blur text-xs font-medium text-white">
+                                Roblox
+                            </span>
+                        </div>
+                    </div>
+                    <div class="p-5">
+                        <h3 class="font-semibold text-lg mb-1.5 group-hover:text-orange-300 transition">${p.name}</h3>
+                        <p class="text-sm text-stone-400 mb-4 line-clamp-2 leading-relaxed">${p.description}</p>
+                        
+                        <div class="flex flex-wrap gap-1.5 mb-4">
+                            ${p.tags.map(t => '<span class="px-2 py-0.5 rounded text-xs bg-dark-600 text-stone-400">' + t + '</span>').join('')}
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-2 mb-4">
+                            <button onclick="selectDuration(${p.id}, 'day')" 
+                                class="price-btn ${dur === 'day' ? 'active' : ''} py-2 rounded-lg text-xs font-medium text-center">
+                                <div class="text-stone-300">1 Jour</div>
+                                <div class="font-bold text-white mt-0.5">${formatPrice(p.prices.day)}</div>
+                            </button>
+                            <button onclick="selectDuration(${p.id}, 'week')" 
+                                class="price-btn ${dur === 'week' ? 'active' : ''} py-2 rounded-lg text-xs font-medium text-center">
+                                <div class="text-stone-300">1 Semaine</div>
+                                <div class="font-bold text-white mt-0.5">${formatPrice(p.prices.week)}</div>
+                            </button>
+                            <button onclick="selectDuration(${p.id}, 'month')" 
+                                class="price-btn ${dur === 'month' ? 'active' : ''} py-2 rounded-lg text-xs font-medium text-center">
+                                <div class="text-stone-300">1 Mois</div>
+                                <div class="font-bold text-white mt-0.5">${formatPrice(p.prices.month)}</div>
+                            </button>
+                        </div>
+                        
+                        <button onclick="addToCart(${p.id})" class="btn-primary w-full text-white text-sm font-semibold py-2.5 rounded-lg">
+                            <i class="fas fa-cart-plus mr-1.5"></i> Ajouter • ${formatPrice(price)}
+                        </button>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function selectDuration(id, dur) {
+            selectedDuration[id] = dur;
+            renderProducts(currentFilter);
+        }
+
+        function filterProducts(cat) {
+            currentFilter = cat;
+            document.querySelectorAll('.category-pill').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.cat === cat);
+            });
+            renderProducts(cat);
+        }
+
+        function addToCart(id) {
+            const product = products.find(p => p.id === id);
+            if (!product) return;
+            
+            const dur = selectedDuration[id] || 'week';
+            const price = product.prices[dur];
+            const cartId = id + '_' + dur;
+            
+            const existing = cart.find(item => item.cartId === cartId);
+            if (existing) {
+                existing.qty += 1;
+            } else {
+                cart.push({
+                    cartId,
+                    id: product.id,
+                    name: product.name,
+                    duration: dur,
+                    durationLabel: getDurationLabel(dur),
+                    price,
+                    icon: product.icon,
+                    color: product.color,
+                    qty: 1
+                });
+            }
+            
+            saveCart();
+            updateCartUI();
+            showToast(product.name + ' (' + getDurationLabel(dur) + ') ajoute');
+        }
+
+        function removeFromCart(cartId) {
+            cart = cart.filter(item => item.cartId !== cartId);
+            saveCart();
+            updateCartUI();
+        }
+
+        function changeQty(cartId, delta) {
+            const item = cart.find(i => i.cartId === cartId);
+            if (!item) return;
+            item.qty += delta;
+            if (item.qty <= 0) removeFromCart(cartId);
+            else {
+                saveCart();
+                updateCartUI();
+            }
+        }
+
+        function saveCart() {
+            localStorage.setItem('vocalypse_cart', JSON.stringify(cart));
+        }
+
+        function updateCartUI() {
+            const countEl = document.getElementById('cart-count');
+            const totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
+            
+            if (totalQty > 0) {
+                countEl.textContent = totalQty;
+                countEl.classList.remove('hidden');
+            } else {
+                countEl.classList.add('hidden');
+            }
+            
+            const container = document.getElementById('cart-items');
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 text-stone-500">
+                        <i class="fas fa-shopping-basket text-4xl mb-3 opacity-40"></i>
+                        <p>Votre panier est vide</p>
+                    </div>`;
+            } else {
+                container.innerHTML = cart.map(item => `
+                    <div class="flex gap-3 items-center">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center flex-shrink-0">
+                            <i class="${item.icon} text-white"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-medium text-sm truncate">${item.name}</h4>
+                            <p class="text-xs text-stone-400">${item.durationLabel}</p>
+                            <p class="text-orange-300 text-sm font-semibold">${formatPrice(item.price)}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="changeQty('${item.cartId}', -1)" class="w-7 h-7 rounded-lg bg-dark-600 hover:bg-dark-500 flex items-center justify-center text-sm">−</button>
+                            <span class="w-6 text-center text-sm font-medium">${item.qty}</span>
+                            <button onclick="changeQty('${item.cartId}', 1)" class="w-7 h-7 rounded-lg bg-dark-600 hover:bg-dark-500 flex items-center justify-center text-sm">+</button>
+                        </div>
+                        <button onclick="removeFromCart('${item.cartId}')" class="p-1.5 text-stone-500 hover:text-red-400 transition">
+                            <i class="fas fa-trash-alt text-sm"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+            
+            const total = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+            document.getElementById('cart-total').textContent = formatPrice(total);
+        }
+
+        function toggleCart() {
+            document.getElementById('cart-modal').classList.toggle('active');
+        }
+
+        function checkout() {
+            if (cart.length === 0) {
+                showToast('Votre panier est vide');
+                return;
+            }
+            
+            const methodLabel = selectedPayment === 'visa' ? 'Visa / Carte' : 'PayPal';
+            showToast('Paiement ' + methodLabel + ' en cours...');
+            
+            const item = cart[0];
+            
+            setTimeout(() => {
+                const key = 'VOCAL-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + 
+                            Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + 
+                            Math.random().toString(36).substring(2, 6).toUpperCase();
+                
+                document.getElementById('success-script-name').textContent = item.name;
+                document.getElementById('success-duration').textContent = item.durationLabel;
+                document.getElementById('success-key').value = key;
+                
+                const loadstring = 'loadstring(game:HttpGet("https://vocalypse.com/s/' + item.id + '"))()\n-- Cle: ' + key;
+                document.getElementById('success-loadstring').textContent = loadstring;
+                
+                cart = [];
+                saveCart();
+                updateCartUI();
+                toggleCart();
+                
+                document.getElementById('success-modal').classList.add('active');
+            }, 1600);
+        }
+        
+        function closeSuccess() {
+            document.getElementById('success-modal').classList.remove('active');
+        }
+        
+        function copyKey() {
+            const input = document.getElementById('success-key');
+            input.select();
+            navigator.clipboard.writeText(input.value);
+            showToast('Cle copiee !');
+        }
+        
+        function copyLoadstring() {
+            const text = document.getElementById('success-loadstring').textContent;
+            navigator.clipboard.writeText(text);
+            showToast('Script copie ! Colle-le dans Xeno');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 2500);
+        }
+
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+        document.querySelectorAll('#mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => {
+                document.getElementById('mobile-menu').classList.add('hidden');
+            });
+        });
+
+        document.getElementById('cart-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'cart-modal') toggleCart();
+        });
+        
+        document.getElementById('success-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'success-modal') closeSuccess();
+        });
+
+        renderProducts();
+        updateCartUI();
+    </script>
+</body>
+</html>
