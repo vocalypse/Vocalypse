@@ -20,8 +20,6 @@
     </script>
     <style>
         body { background: #050505; color: #f5f5f5; }
-        .btn-red { background: linear-gradient(135deg, #dc2626, #b91c1c); }
-        .btn-red:hover { background: linear-gradient(135deg, #ef4444, #dc2626); }
     </style>
 </head>
 <body class="min-h-screen">
@@ -43,7 +41,7 @@
                 <i class="fas fa-check text-2xl text-emerald-400"></i>
             </div>
             <h1 class="text-2xl sm:text-3xl font-bold mb-2">Paiement confirme</h1>
-            <p class="text-stone-400">Merci ! Voici ton script. Copie-le et colle-le dans ton launcher.</p>
+            <p class="text-stone-400">Merci ! Voici ta cle et ton script pour Xeno.</p>
         </div>
 
         <div class="bg-dark-800 border border-dark-600 rounded-2xl overflow-hidden mb-6">
@@ -58,17 +56,18 @@
             <div class="p-5 space-y-5">
                 <div>
                     <div class="flex items-center justify-between mb-2">
-                        <label class="text-sm text-stone-400">Ta cle unique</label>
+                        <label class="text-sm text-stone-400">Ta cle KeyAuth</label>
                         <button onclick="copyKey()" class="text-xs text-red-400 hover:text-red-300">
                             <i class="fas fa-copy mr-1"></i> Copier
                         </button>
                     </div>
                     <input id="key-field" readonly class="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 font-mono text-emerald-400 text-sm" value="">
+                    <p class="text-xs text-stone-500 mt-2">Cette cle est liee a 1 seul PC (anti-share).</p>
                 </div>
 
                 <div>
                     <div class="flex items-center justify-between mb-2">
-                        <label class="text-sm text-stone-400">Script a coller dans ton launcher (Xeno, etc.)</label>
+                        <label class="text-sm text-stone-400">Script a coller dans Xeno</label>
                         <button onclick="copyScript()" class="text-xs text-red-400 hover:text-red-300">
                             <i class="fas fa-copy mr-1"></i> Copier
                         </button>
@@ -109,15 +108,20 @@
     </main>
 
     <script>
+        // Noms des scripts selon ?p=
         const scripts = {
-            '1': { name: 'Gakuran Full Script', code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/full.lua"))()' },
-            '2': { name: 'Gakuran ESP Pro', code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/esp.lua"))()' },
-            '3': { name: 'Fly + NoClip Pack', code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/fly.lua"))()' },
-            '4': { name: 'Gakuran Emote Menu', code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/emote.lua"))()' },
-            '5': { name: 'Gakuran Utility Hub', code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/hub.lua"))()' },
-            '6': { name: 'NoClip Advanced', code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/noclip.lua"))()' },
-            '9': { name: 'Gakuran Premium All-in-One', code: 'loadstring(game:HttpGet("https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/premium.lua"))()' }
+            '1': { name: 'Gakuran Full Script' },
+            '2': { name: 'Gakuran ESP Pro' },
+            '3': { name: 'Fly + NoClip Pack' },
+            '4': { name: 'Gakuran Emote Menu' },
+            '5': { name: 'Gakuran Utility Hub' },
+            '6': { name: 'NoClip Advanced' },
+            '9': { name: 'Gakuran Premium All-in-One' }
         };
+
+        // IMPORTANT: quand ton copain aura le loader KeyAuth,
+        // remplace LOADER_URL ci-dessous par le vrai lien du script.
+        const LOADER_URL = "https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/loader.lua";
 
         function genKey() {
             const p = () => Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -127,12 +131,22 @@
         const params = new URLSearchParams(location.search);
         const id = params.get('p') || '1';
         const info = scripts[id] || scripts['1'];
+
+        // Pour l'instant cle generee sur la page.
+        // Plus tard: tu mettras ici une vraie cle KeyAuth apres chaque vente.
         const key = genKey();
 
         document.getElementById('script-name').textContent = info.name;
         document.getElementById('key-field').value = key;
-        document.getElementById('script-field').textContent =
-            info.code + '\n\n-- Cle: ' + key + '\n-- Vocalypse | 1 utilisateur uniquement';
+
+        // Format KeyAuth classique: script_key + loadstring
+        const scriptText =
+            'script_key = "' + key + '";\n' +
+            'loadstring(game:HttpGet("' + LOADER_URL + '"))()\n' +
+            '\n-- Vocalypse | ' + info.name + '\n' +
+            '-- 1 utilisateur (HWID) — ne pas partager';
+
+        document.getElementById('script-field').textContent = scriptText.replace(/\\n/g, '\n');
 
         function copyKey() {
             navigator.clipboard.writeText(document.getElementById('key-field').value);
@@ -140,7 +154,7 @@
         }
         function copyScript() {
             navigator.clipboard.writeText(document.getElementById('script-field').textContent);
-            alert('Script copie ! Colle-le dans ton launcher.');
+            alert('Script copie ! Colle-le dans Xeno.');
         }
     </script>
 </body>
