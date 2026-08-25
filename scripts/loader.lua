@@ -8,24 +8,15 @@ local HttpService = game:GetService("HttpService")
 local StarterGui = game:GetService("StarterGui")
 
 local Name = "Application de Vocalypsezombie"
-local Ownerid = "Xl4z6yy181"
+local Ownerid = "Xl4z6yy1B1"
 local APPVersion = "1.0"
 local SCRIPT_URL = "https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/full.lua"
 
-local function urlEncode(s)
-    s = tostring(s or "")
-    s = s:gsub("\n", "\r\n")
-    s = s:gsub("([^%w%-%.%_%~ ])", function(c)
+local function enc(s)
+    return tostring(s or ""):gsub("([^%w%-%.%_%~ ])", function(c)
         return string.format("%%%02X", string.byte(c))
-    end)
-    s = s:gsub(" ", "%%20")
-    return s
+    end):gsub(" ", "%%20")
 end
-
-local License = (type(script_key) == "string" and script_key)
-    or (getgenv and getgenv().script_key)
-    or (getgenv and getgenv().Key)
-    or ""
 
 local function notify(title, text)
     pcall(function()
@@ -38,38 +29,63 @@ local function notify(title, text)
     print("[Vocalypse] " .. tostring(title) .. " | " .. tostring(text))
 end
 
+local License = (type(script_key) == "string" and script_key)
+    or (getgenv and getgenv().script_key)
+    or ""
+License = tostring(License):gsub("^%s+", ""):gsub("%s+$", "")
+
 if License == "" then
-    notify("Vocalypse", "Pas de cle. script_key = \"TA_CLE\"")
+    notify("Vocalypse", "Pas de cle")
     return
 end
 
-notify("Vocalypse", "Verification de la cle...")
+local function get(url)
+    local ok, res = pcall(function() return game:HttpGet(url) end)
+    if ok and type(res) == "string" then return res end
+    local reqFn = request or http_request or (syn and syn.request) or (http and http.request)
+    if reqFn then
+        local ok2, r = pcall(function()
+            return reqFn({ Url = url, Method = "GET" })
+        end)
+        if ok2 and type(r) == "table" then
+            return r.Body or r.body
+        end
+    end
+    return nil
+end
 
-local initUrl = "https://keyauth.win/api/1.1/?name=" .. urlEncode(Name)
-    .. "&ownerid=" .. urlEncode(Ownerid)
-    .. "&type=init&ver=" .. urlEncode(APPVersion)
+notify("Vocalypse", "Init KeyAuth...")
 
-local okInit, initReq = pcall(function()
-    return game:HttpGet(initUrl)
-end)
+local initUrl = "https://keyauth.win/api/1.2/?type=init&name=" .. enc(Name)
+    .. "&ownerid=" .. enc(Ownerid) .. "&ver=" .. enc(APPVersion)
 
-if not okInit then
-    notify("Vocalypse", "HttpGet init echoue: " .. tostring(initReq))
+local initBody = get(initUrl)
+if not initBody or initBody == "" then
+    initUrl = "https://keyauth.win/api/1.1/?name=" .. enc(Name)
+        .. "&ownerid=" .. enc(Ownerid) .. "&type=init&ver=" .. enc(APPVersion)
+    initBody = get(initUrl)
+end
+
+if not initBody then
+    notify("Vocalypse", "Pas de reponse KeyAuth")
     return
 end
 
-if initReq == "KeyAuth_Invalid" then
-    notify("Vocalypse", "App KeyAuth introuvable (nom/ownerid)")
+print("[Vocalypse] init raw: " .. tostring(initBody):sub(1, 120))
+
+if initBody == "KeyAuth_Invalid" then
+    notify("Vocalypse", "App introuvable")
     return
 end
 
-local okJ, initData = pcall(function()
-    return HttpService:JSONDecode(initReq)
-end)
+if initBody:sub(1, 1) == "<" then
+    notify("Vocalypse", "API bloquee (HTML)")
+    return
+end
 
-if not okJ or type(initData) ~= "table" then
-    notify("Vocalypse", "Reponse init invalide")
-    print(tostring(initReq):sub(1, 200))
+local ok, initData = pcall(function() return HttpService:JSONDecode(initBody) end)
+if not ok or type(initData) ~= "table" then
+    notify("Vocalypse", "Init JSON invalide")
     return
 end
 
@@ -80,42 +96,39 @@ end
 
 local sessionid = initData.sessionid or ""
 
-local licUrl = "https://keyauth.win/api/1.1/?name=" .. urlEncode(Name)
-    .. "&ownerid=" .. urlEncode(Ownerid)
-    .. "&type=license&key=" .. urlEncode(License)
-    .. "&ver=" .. urlEncode(APPVersion)
-    .. "&sessionid=" .. urlEncode(sessionid)
+local licUrl = "https://keyauth.win/api/1.2/?type=license&name=" .. enc(Name)
+    .. "&ownerid=" .. enc(Ownerid)
+    .. "&key=" .. enc(License)
+    .. "&ver=" .. enc(APPVersion)
+    .. "&sessionid=" .. enc(sessionid)
 
-local okLic, licReq = pcall(function()
-    return game:HttpGet(licUrl)
-end)
+local licBody = get(licUrl)
+if not licBody then
+    licUrl = "https://keyauth.win/api/1.1/?name=" .. enc(Name)
+        .. "&ownerid=" .. enc(Ownerid)
+        .. "&type=license&key=" .. enc(License)
+        .. "&ver=" .. enc(APPVersion)
+        .. "&sessionid=" .. enc(sessionid)
+    licBody = get(licUrl)
+end
 
-if not okLic then
-    notify("Vocalypse", "HttpGet license echoue")
+if not licBody then
+    notify("Vocalypse", "Pas de reponse license")
     return
 end
 
-local okL, licData = pcall(function()
-    return HttpService:JSONDecode(licReq)
-end)
+print("[Vocalypse] license raw: " .. tostring(licBody):sub(1, 120))
 
-if not okL or type(licData) ~= "table" then
-    notify("Vocalypse", "Reponse license invalide")
-    print(tostring(licReq):sub(1, 200))
+local ok2, licData = pcall(function() return HttpService:JSONDecode(licBody) end)
+if not ok2 or type(licData) ~= "table" or licData.success ~= true then
+    notify("Vocalypse", "Cle refusee: " .. tostring(licData and licData.message or licBody:sub(1, 40)))
     return
 end
 
-if licData.success ~= true then
-    notify("Vocalypse", "Cle refusee: " .. tostring(licData.message))
-    return
-end
-
-notify("Vocalypse", "Cle OK - chargement hub...")
-
-local okS, err = pcall(function()
+notify("Vocalypse", "Cle OK - hub...")
+local ok3, err = pcall(function()
     loadstring(game:HttpGet(SCRIPT_URL))()
 end)
-
-if not okS then
-    notify("Vocalypse", "Erreur hub: " .. tostring(err))
+if not ok3 then
+    notify("Vocalypse", "Hub: " .. tostring(err))
 end
