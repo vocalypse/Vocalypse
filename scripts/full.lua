@@ -1,6 +1,7 @@
 -- =============================================
--- 🌋🌸 VOLCANO GAKURAN HUB 🌸🌋
--- Fly / Noclip / Speed / Jump
+-- VOLCANO GAKURAN HUB
+-- Fly / Noclip / Speed / Jump / ESP / TP / Attach
+-- Vocalypse - lifetime + updates via loadstring
 -- =============================================
 
 local Players = game:GetService("Players")
@@ -51,7 +52,7 @@ local function updateCharacter()
 	rootPart = character:FindFirstChild("HumanoidRootPart")
 end
 
--- ====================== FLY  ======================
+-- ====================== FLY ======================
 local function stopFly()
 	if flyConnection then
 		flyConnection:Disconnect()
@@ -108,7 +109,7 @@ local function startFly()
 	end)
 end
 
--- ====================== NOCLIP (refait) ======================
+-- ====================== NOCLIP ======================
 local function stopNoclip()
 	if noclipConnection then
 		noclipConnection:Disconnect()
@@ -134,7 +135,6 @@ local function onCharacterAdded(char)
 	humanoid = char:WaitForChild("Humanoid", 8)
 	rootPart = char:WaitForChild("HumanoidRootPart", 8)
 
-	-- attach
 	isAttached = false
 	currentTarget = nil
 	wasFlyingBeforeAttach = false
@@ -147,7 +147,6 @@ local function onCharacterAdded(char)
 
 	task.wait(0.5)
 
-	-- Réactive les features
 	if speedEnabled and humanoid then
 		humanoid.WalkSpeed = turbo and 100 or 50
 	end
@@ -195,7 +194,7 @@ local function createNameTag(player)
 	local text = Instance.new("TextLabel")
 	text.Size = UDim2.new(1, 0, 1, 0)
 	text.BackgroundTransparency = 1
-	text.Text = "🌸 " .. player.Name
+	text.Text = player.Name
 	text.TextColor3 = getTeamColor(player)
 	text.TextStrokeTransparency = 0
 	text.TextStrokeColor3 = Color3.new(0, 0, 0)
@@ -255,7 +254,7 @@ local function updateESP()
 	end
 end
 
--- ====================== ATTACH  ======================
+-- ====================== ATTACH ======================
 local OFFSET = CFrame.new(0, 0.6, 1.7)
 
 local function StopAttach()
@@ -272,7 +271,7 @@ local function StopAttach()
 		task.delay(0.3, function()
 			startFly()
 			if flyBtn then
-				flyBtn.Text = "🌸 FLY : ON (" .. flySpeed .. ")"
+				flyBtn.Text = "FLY : ON (" .. flySpeed .. ")"
 				flyBtn.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
 			end
 		end)
@@ -293,7 +292,7 @@ local function AttachToPlayer(target)
 		flyEnabled = false
 		stopFly()
 		if flyBtn then
-			flyBtn.Text = "🌸 FLY : OFF (" .. flySpeed .. ")"
+			flyBtn.Text = "FLY : OFF (" .. flySpeed .. ")"
 			flyBtn.BackgroundColor3 = Color3.fromRGB(32, 20, 38)
 		end
 	end
@@ -344,7 +343,7 @@ main.BackgroundColor3 = Color3.fromRGB(16, 12, 20)
 main.BorderSizePixel = 0
 main.Active = true
 main.Draggable = true
-main.Visible = false
+main.Visible = true
 main.Parent = gui
 Instance.new("UICorner", main).CornerRadius = UDim.new(0, 20)
 
@@ -364,7 +363,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -60, 1, 0)
 title.Position = UDim2.new(0, 15, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "🌋🌸 VOLCANO GAKURAN 🌸🌋"
+title.Text = "VOLCANO GAKURAN"
 title.Font = Enum.Font.GothamBlack
 title.TextSize = 19
 title.TextColor3 = Color3.fromRGB(255, 130, 180)
@@ -374,7 +373,7 @@ title.Parent = header
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 36, 0, 36)
 closeBtn.Position = UDim2.new(1, -45, 0, 10)
-closeBtn.Text = "✕"
+closeBtn.Text = "X"
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.TextSize = 18
 closeBtn.BackgroundColor3 = Color3.fromRGB(50, 25, 40)
@@ -402,10 +401,10 @@ local function createTab(text, x)
 	return btn
 end
 
-local tabMove = createTab("🌋 MOVE", 0)
-local tabESP = createTab("🌸 ESP", 105)
-local tabTP = createTab("🌋 TP", 210)
-local tabAttach = createTab("🌸 ATTACH", 315)
+local tabMove = createTab("MOVE", 0)
+local tabESP = createTab("ESP", 105)
+local tabTP = createTab("TP", 210)
+local tabAttach = createTab("ATTACH", 315)
 
 local content = Instance.new("Frame")
 content.Size = UDim2.new(1, -20, 1, -115)
@@ -453,7 +452,6 @@ tabESP.MouseButton1Click:Connect(function() switchTab("ESP") end)
 tabTP.MouseButton1Click:Connect(function() switchTab("TP") end)
 tabAttach.MouseButton1Click:Connect(function() switchTab("ATTACH") end)
 
--- ========== PAGE  ==========
 local function createMoveBtn(text, y)
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(1, 0, 0, 44)
@@ -468,10 +466,10 @@ local function createMoveBtn(text, y)
 	return btn
 end
 
-local noclipBtn = createMoveBtn("🌋 NOCLIP : OFF", 8)
-local speedBtn = createMoveBtn("🌸 SPEED : OFF", 62)
-local jumpBtn = createMoveBtn("🌋 INFINITE JUMP : OFF", 116)
-local flyBtn = createMoveBtn("🌸 FLY : OFF (" .. flySpeed .. ")", 170)
+local noclipBtn = createMoveBtn("NOCLIP : OFF", 8)
+local speedBtn = createMoveBtn("SPEED : OFF", 62)
+local jumpBtn = createMoveBtn("INFINITE JUMP : OFF", 116)
+local flyBtn = createMoveBtn("FLY : OFF (" .. flySpeed .. ")", 170)
 
 local sliderFrame = Instance.new("Frame")
 sliderFrame.Size = UDim2.new(1, 0, 0, 30)
@@ -502,12 +500,11 @@ sliderKnob.InputEnded:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = false end
 end)
 
--- ==========  ESP ==========
 local distLabel = Instance.new("TextLabel")
 distLabel.Size = UDim2.new(1, 0, 0, 25)
 distLabel.Position = UDim2.new(0, 0, 0, 8)
 distLabel.BackgroundTransparency = 1
-distLabel.Text = "🌸 Distance Max : " .. maxDistance
+distLabel.Text = "Distance Max : " .. maxDistance
 distLabel.TextColor3 = Color3.fromRGB(255, 200, 220)
 distLabel.Font = Enum.Font.Gotham
 distLabel.TextSize = 15
@@ -528,14 +525,14 @@ distBox.FocusLost:Connect(function()
 	local num = tonumber(distBox.Text)
 	if num and num > 0 then
 		maxDistance = num
-		distLabel.Text = "🌸 Distance Max : " .. maxDistance
+		distLabel.Text = "Distance Max : " .. maxDistance
 	end
 end)
 
 local hlBtn = Instance.new("TextButton")
 hlBtn.Size = UDim2.new(1, 0, 0, 44)
 hlBtn.Position = UDim2.new(0, 0, 0, 90)
-hlBtn.Text = "🌋 HIGHLIGHTS : ON"
+hlBtn.Text = "HIGHLIGHTS : ON"
 hlBtn.Font = Enum.Font.GothamBold
 hlBtn.TextSize = 15
 hlBtn.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
@@ -546,7 +543,7 @@ Instance.new("UICorner", hlBtn).CornerRadius = UDim.new(0, 11)
 local nameBtn = Instance.new("TextButton")
 nameBtn.Size = UDim2.new(1, 0, 0, 44)
 nameBtn.Position = UDim2.new(0, 0, 0, 148)
-nameBtn.Text = "🌸 NAMES : ON"
+nameBtn.Text = "NAMES : ON"
 nameBtn.Font = Enum.Font.GothamBold
 nameBtn.TextSize = 15
 nameBtn.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
@@ -554,12 +551,11 @@ nameBtn.TextColor3 = Color3.new(1, 1, 1)
 nameBtn.Parent = pageESP
 Instance.new("UICorner", nameBtn).CornerRadius = UDim.new(0, 11)
 
--- ========== TP ==========
 local tpSearch = Instance.new("TextBox")
 tpSearch.Size = UDim2.new(1, 0, 0, 36)
 tpSearch.Position = UDim2.new(0, 0, 0, 5)
 tpSearch.BackgroundColor3 = Color3.fromRGB(35, 22, 42)
-tpSearch.PlaceholderText = "🔍 Rechercher un joueur..."
+tpSearch.PlaceholderText = "Rechercher un joueur..."
 tpSearch.PlaceholderColor3 = Color3.fromRGB(160, 130, 150)
 tpSearch.Text = ""
 tpSearch.TextColor3 = Color3.fromRGB(255, 210, 230)
@@ -584,12 +580,11 @@ tpList.SortOrder = Enum.SortOrder.Name
 tpList.Padding = UDim.new(0, 5)
 tpList.Parent = tpScroll
 
--- ========== ATTACH ==========
 local attachSearch = Instance.new("TextBox")
 attachSearch.Size = UDim2.new(1, 0, 0, 36)
 attachSearch.Position = UDim2.new(0, 0, 0, 5)
 attachSearch.BackgroundColor3 = Color3.fromRGB(35, 22, 42)
-attachSearch.PlaceholderText = "🔍 Rechercher un joueur..."
+attachSearch.PlaceholderText = "Rechercher un joueur..."
 attachSearch.PlaceholderColor3 = Color3.fromRGB(160, 130, 150)
 attachSearch.Text = ""
 attachSearch.TextColor3 = Color3.fromRGB(255, 210, 230)
@@ -617,7 +612,7 @@ attachList.Parent = attachScroll
 local detachBtn = Instance.new("TextButton")
 detachBtn.Size = UDim2.new(1, 0, 0, 42)
 detachBtn.Position = UDim2.new(0, 0, 1, -48)
-detachBtn.Text = "🌸 DÉTACHER (X)"
+detachBtn.Text = "DETACHER (X)"
 detachBtn.Font = Enum.Font.GothamBold
 detachBtn.TextSize = 15
 detachBtn.BackgroundColor3 = Color3.fromRGB(60, 30, 50)
@@ -625,12 +620,11 @@ detachBtn.TextColor3 = Color3.fromRGB(255, 200, 220)
 detachBtn.Parent = pageAttach
 Instance.new("UICorner", detachBtn).CornerRadius = UDim.new(0, 11)
 
--- ====================== LISTES ======================
 local function createTPButton(player)
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(1, -8, 0, 34)
 	btn.BackgroundColor3 = Color3.fromRGB(40, 25, 48)
-	btn.Text = "🌋 →  " .. player.Name
+	btn.Text = "->  " .. player.Name
 	btn.TextColor3 = Color3.fromRGB(255, 210, 230)
 	btn.Font = Enum.Font.Gotham
 	btn.TextSize = 14
@@ -669,7 +663,7 @@ local function createAttachButton(player)
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(1, -8, 0, 34)
 	btn.BackgroundColor3 = Color3.fromRGB(40, 25, 48)
-	btn.Text = "🌸 →  " .. player.Name
+	btn.Text = "->  " .. player.Name
 	btn.TextColor3 = Color3.fromRGB(255, 210, 230)
 	btn.Font = Enum.Font.Gotham
 	btn.TextSize = 14
@@ -696,10 +690,9 @@ local function refreshAttach(filter)
 	attachScroll.CanvasSize = UDim2.new(0, 0, 0, attachList.AbsoluteContentSize.Y + 10)
 end
 
--- ====================== BOUTONS ======================
 noclipBtn.MouseButton1Click:Connect(function()
 	noclip = not noclip
-	noclipBtn.Text = noclip and "🌋 NOCLIP : ON" or "🌋 NOCLIP : OFF"
+	noclipBtn.Text = noclip and "NOCLIP : ON" or "NOCLIP : OFF"
 	noclipBtn.BackgroundColor3 = noclip and Color3.fromRGB(0, 140, 80) or Color3.fromRGB(32, 20, 38)
 	if noclip then startNoclip() else stopNoclip() end
 end)
@@ -709,26 +702,26 @@ speedBtn.MouseButton1Click:Connect(function()
 	if humanoid then
 		humanoid.WalkSpeed = speedEnabled and (turbo and 100 or 50) or 16
 	end
-	speedBtn.Text = speedEnabled and "🌸 SPEED : ON" or "🌸 SPEED : OFF"
+	speedBtn.Text = speedEnabled and "SPEED : ON" or "SPEED : OFF"
 	speedBtn.BackgroundColor3 = speedEnabled and Color3.fromRGB(0, 140, 80) or Color3.fromRGB(32, 20, 38)
 end)
 
 jumpBtn.MouseButton1Click:Connect(function()
 	infiniteJump = not infiniteJump
-	jumpBtn.Text = infiniteJump and "🌋 INFINITE JUMP : ON" or "🌋 INFINITE JUMP : OFF"
+	jumpBtn.Text = infiniteJump and "INFINITE JUMP : ON" or "INFINITE JUMP : OFF"
 	jumpBtn.BackgroundColor3 = infiniteJump and Color3.fromRGB(0, 140, 80) or Color3.fromRGB(32, 20, 38)
 end)
 
 flyBtn.MouseButton1Click:Connect(function()
 	flyEnabled = not flyEnabled
-	flyBtn.Text = flyEnabled and ("🌸 FLY : ON (" .. flySpeed .. ")") or ("🌸 FLY : OFF (" .. flySpeed .. ")")
+	flyBtn.Text = flyEnabled and ("FLY : ON (" .. flySpeed .. ")") or ("FLY : OFF (" .. flySpeed .. ")")
 	flyBtn.BackgroundColor3 = flyEnabled and Color3.fromRGB(0, 140, 80) or Color3.fromRGB(32, 20, 38)
 	if flyEnabled then startFly() else stopFly() end
 end)
 
 hlBtn.MouseButton1Click:Connect(function()
 	highlightsEnabled = not highlightsEnabled
-	hlBtn.Text = highlightsEnabled and "🌋 HIGHLIGHTS : ON" or "🌋 HIGHLIGHTS : OFF"
+	hlBtn.Text = highlightsEnabled and "HIGHLIGHTS : ON" or "HIGHLIGHTS : OFF"
 	hlBtn.BackgroundColor3 = highlightsEnabled and Color3.fromRGB(0, 140, 80) or Color3.fromRGB(160, 40, 60)
 	if not highlightsEnabled then
 		for _, p in ipairs(Players:GetPlayers()) do
@@ -739,7 +732,7 @@ end)
 
 nameBtn.MouseButton1Click:Connect(function()
 	namesEnabled = not namesEnabled
-	nameBtn.Text = namesEnabled and "🌸 NAMES : ON" or "🌸 NAMES : OFF"
+	nameBtn.Text = namesEnabled and "NAMES : ON" or "NAMES : OFF"
 	nameBtn.BackgroundColor3 = namesEnabled and Color3.fromRGB(0, 140, 80) or Color3.fromRGB(160, 40, 60)
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer then
@@ -762,7 +755,6 @@ attachSearch:GetPropertyChangedSignal("Text"):Connect(function()
 	refreshAttach(attachSearch.Text)
 end)
 
--- ====================== LOOPS ======================
 RunService.RenderStepped:Connect(function()
 	if draggingSlider then
 		local mouse = UIS:GetMouseLocation()
@@ -773,7 +765,7 @@ RunService.RenderStepped:Connect(function()
 		flySpeed = math.floor(scale * 490 + 10)
 		sliderFill.Size = UDim2.new(scale, 0, 1, 0)
 		sliderKnob.Position = UDim2.new(scale - 0.05, 0, 0, 1)
-		flyBtn.Text = (flyEnabled and "🌸 FLY : ON (" or "🌸 FLY : OFF (") .. flySpeed .. ")"
+		flyBtn.Text = (flyEnabled and "FLY : ON (" or "FLY : OFF (") .. flySpeed .. ")"
 	end
 
 	hue = (hue + 0.004) % 1
@@ -806,7 +798,7 @@ UIS.InputBegan:Connect(function(input, gp)
 		if speedEnabled and humanoid then humanoid.WalkSpeed = 100 end
 	elseif input.KeyCode == Enum.KeyCode.X then
 		StopAttach()
-	elseif input.KeyCode == Enum.KeyCode.Insert then
+	elseif input.KeyCode == Enum.KeyCode.RightShift or input.KeyCode == Enum.KeyCode.F4 then
 		main.Visible = not main.Visible
 	end
 end)
@@ -822,7 +814,6 @@ closeBtn.MouseButton1Click:Connect(function()
 	main.Visible = false
 end)
 
---  joueurs
 local function setupPlayer(player)
 	if player == LocalPlayer then return end
 	player.CharacterAdded:Connect(function()
@@ -852,6 +843,6 @@ end)
 refreshTP("")
 refreshAttach("")
 
-print("🌋🌸 VOLCANO GAKURAN HUB chargé !")
-print("→ Insert pour ouvrir / fermer")
-print("→ X pour détacher")
+print("VOLCANO GAKURAN HUB charge !")
+print("-> RightShift ou F4 pour ouvrir / fermer")
+print("-> X pour detacher")
