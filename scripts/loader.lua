@@ -1,18 +1,18 @@
 --[[
   Vocalypse - KeyAuth Loader
-  1) Mets ta clé : script_key = "TA_CLE"
-  2) Execute ce loader
-  3) Si OK -> charge Volcano Gakuran Hub + updates auto
+  Usage:
+    script_key = "YOUR_KEY"
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/loader.lua"))()
 ]]
 
 local HttpService = game:GetService("HttpService")
 local StarterGui = game:GetService("StarterGui")
 
--- ========== CONFIG KEYAUTH (à remplir) ==========
-local Name = "Application de Vocalypsezombie"  -- nom exact de l'app KeyAuth
-local Ownerid = "REMPLACE_OWNER_ID"            -- Owner ID dans le dashboard KeyAuth
+-- ========== KEYAUTH CONFIG ==========
+local Name = "Application de Vocalypsezombie"
+local Ownerid = "REMPLACE_OWNER_ID"
 local APPVersion = "1.0"
--- ================================================
+-- ====================================
 
 local SCRIPT_URL = "https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/full.lua"
 
@@ -33,16 +33,15 @@ local function notify(title, text)
 end
 
 if Ownerid == "REMPLACE_OWNER_ID" or Ownerid == "" then
-    notify("Vocalypse", "Owner ID KeyAuth non configure dans loader.lua")
+    notify("Vocalypse", "Owner ID not set in loader.lua")
     return
 end
 
 if License == "" then
-    notify("Vocalypse", "Aucune cle. Utilise: script_key = \"TA_CLE\"")
+    notify("Vocalypse", "No key. Use: script_key = \"YOUR_KEY\"")
     return
 end
 
--- Init KeyAuth
 local initReq = game:HttpGet(
     "https://keyauth.win/api/1.1/?name=" .. Name
     .. "&ownerid=" .. Ownerid
@@ -50,7 +49,7 @@ local initReq = game:HttpGet(
 )
 
 if initReq == "KeyAuth_Invalid" then
-    notify("Vocalypse", "Application KeyAuth introuvable (nom / ownerid)")
+    notify("Vocalypse", "KeyAuth app not found (name/ownerid)")
     return
 end
 
@@ -59,18 +58,17 @@ local ok, initData = pcall(function()
 end)
 
 if not ok or not initData then
-    notify("Vocalypse", "Erreur init KeyAuth")
+    notify("Vocalypse", "KeyAuth init error")
     return
 end
 
 if initData.success ~= true then
-    notify("Vocalypse", tostring(initData.message or "Init echouee"))
+    notify("Vocalypse", tostring(initData.message or "Init failed"))
     return
 end
 
 local sessionid = initData.sessionid
 
--- License check
 local licReq = game:HttpGet(
     "https://keyauth.win/api/1.1/?name=" .. Name
     .. "&ownerid=" .. Ownerid
@@ -84,21 +82,21 @@ local ok2, licData = pcall(function()
 end)
 
 if not ok2 or not licData then
-    notify("Vocalypse", "Erreur verification cle")
+    notify("Vocalypse", "Key check error")
     return
 end
 
 if licData.success ~= true then
-    notify("Vocalypse", "Cle invalide: " .. tostring(licData.message or "?"))
+    notify("Vocalypse", "Invalid key: " .. tostring(licData.message or "?"))
     return
 end
 
-notify("Vocalypse", "Cle valide - chargement du hub...")
+notify("Vocalypse", "Key valid - loading hub...")
 
 local ok3, err = pcall(function()
     loadstring(game:HttpGet(SCRIPT_URL))()
 end)
 
 if not ok3 then
-    notify("Vocalypse", "Erreur chargement script: " .. tostring(err))
+    notify("Vocalypse", "Script load error: " .. tostring(err))
 end
