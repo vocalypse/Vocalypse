@@ -10,7 +10,7 @@ local StarterGui = game:GetService("StarterGui")
 
 -- ========== KEYAUTH CONFIG ==========
 local Name = "Application de Vocalypsezombie"
-local Ownerid = "REMPLACE_OWNER_ID"
+local Ownerid = "Xl4z6yy1B1"
 local APPVersion = "1.0"
 -- ====================================
 
@@ -32,7 +32,7 @@ local function notify(title, text)
     print("[Vocalypse] " .. tostring(title) .. " - " .. tostring(text))
 end
 
-if Ownerid == "REMPLACE_OWNER_ID" or Ownerid == "" then
+if Ownerid == "Xl4z6yy1B1" or Ownerid == "" then
     notify("Vocalypse", "Owner ID not set in loader.lua")
     return
 end
