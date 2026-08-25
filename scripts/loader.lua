@@ -7,7 +7,7 @@
 local HttpService = game:GetService("HttpService")
 local StarterGui = game:GetService("StarterGui")
 
-local Name = "Application de Vocalypsezombie"
+local Name = "Vocalypse"
 local Ownerid = "Xl4z6yy1B1"
 local APPVersion = "1.0"
 local SCRIPT_URL = "https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/full.lua"
