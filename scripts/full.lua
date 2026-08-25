@@ -334,7 +334,14 @@ gui.Name = "VolcanoGakuranHub"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.DisplayOrder = 99999
-gui.Parent = gethui and gethui() or game:GetService("CoreGui")
+local okGui, guiParent = pcall(function()
+	if gethui then return gethui() end
+	return game:GetService("CoreGui")
+end)
+gui.Parent = (okGui and guiParent) or game:GetService("CoreGui")
+if not gui.Parent then
+	gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
 
 local main = Instance.new("Frame")
 main.Size = UDim2.new(0, 440, 0, 540)
@@ -798,7 +805,7 @@ UIS.InputBegan:Connect(function(input, gp)
 		if speedEnabled and humanoid then humanoid.WalkSpeed = 100 end
 	elseif input.KeyCode == Enum.KeyCode.X then
 		StopAttach()
-	elseif input.KeyCode == Enum.KeyCode.RightShift or input.KeyCode == Enum.KeyCode.F4 then
+	elseif input.KeyCode == Enum.KeyCode.Insert or input.KeyCode == Enum.KeyCode.RightShift or input.KeyCode == Enum.KeyCode.F4 then
 		main.Visible = not main.Visible
 	end
 end)
@@ -844,5 +851,5 @@ refreshTP("")
 refreshAttach("")
 
 print("VOLCANO GAKURAN HUB charge !")
-print("-> RightShift ou F4 pour ouvrir / fermer")
+print("-> Insert / RightShift / F4 pour ouvrir")
 print("-> X pour detacher")
