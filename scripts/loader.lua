@@ -1,18 +1,15 @@
 --[[
   Vocalypse - KeyAuth Loader
-  Usage:
-    script_key = "YOUR_KEY"
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/loader.lua"))()
+  script_key = "YOUR_KEY"
+  loadstring(game:HttpGet("https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/loader.lua"))()
 ]]
 
 local HttpService = game:GetService("HttpService")
 local StarterGui = game:GetService("StarterGui")
 
--- ========== KEYAUTH CONFIG ==========
 local Name = "Application de Vocalypsezombie"
-local Ownerid = "Xl4z6yy1B1"
+local Ownerid = "Xl4z6yy181"
 local APPVersion = "1.0"
--- ====================================
 
 local SCRIPT_URL = "https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/full.lua"
 
@@ -32,11 +29,6 @@ local function notify(title, text)
     print("[Vocalypse] " .. tostring(title) .. " - " .. tostring(text))
 end
 
-if Ownerid == "Xl4z6yy1B1" or Ownerid == "" then
-    notify("Vocalypse", "Owner ID not set in loader.lua")
-    return
-end
-
 if License == "" then
     notify("Vocalypse", "No key. Use: script_key = \"YOUR_KEY\"")
     return
@@ -49,7 +41,7 @@ local initReq = game:HttpGet(
 )
 
 if initReq == "KeyAuth_Invalid" then
-    notify("Vocalypse", "KeyAuth app not found (name/ownerid)")
+    notify("Vocalypse", "KeyAuth app not found")
     return
 end
 
@@ -57,13 +49,8 @@ local ok, initData = pcall(function()
     return HttpService:JSONDecode(initReq)
 end)
 
-if not ok or not initData then
-    notify("Vocalypse", "KeyAuth init error")
-    return
-end
-
-if initData.success ~= true then
-    notify("Vocalypse", tostring(initData.message or "Init failed"))
+if not ok or not initData or initData.success ~= true then
+    notify("Vocalypse", tostring(initData and initData.message or "Init failed"))
     return
 end
 
@@ -81,13 +68,8 @@ local ok2, licData = pcall(function()
     return HttpService:JSONDecode(licReq)
 end)
 
-if not ok2 or not licData then
-    notify("Vocalypse", "Key check error")
-    return
-end
-
-if licData.success ~= true then
-    notify("Vocalypse", "Invalid key: " .. tostring(licData.message or "?"))
+if not ok2 or not licData or licData.success ~= true then
+    notify("Vocalypse", "Invalid key: " .. tostring(licData and licData.message or "?"))
     return
 end
 
@@ -98,5 +80,5 @@ local ok3, err = pcall(function()
 end)
 
 if not ok3 then
-    notify("Vocalypse", "Script load error: " .. tostring(err))
+    notify("Vocalypse", "Script error: " .. tostring(err))
 end
