@@ -618,17 +618,26 @@
                 stripeUrl: "https://buy.stripe.com/6oU5kD7Bn2rW1EIdz6djO08"
             }
         ];
-        // Images premium Volcano Gakuran
+        // Pack principal = Premium All-in-One (id 9)
         (function(){
             const prem = "premium.jpg";
-            const ids = [1,5,9,10];
+            for (let i = products.length - 1; i >= 0; i--) {
+                const n = (products[i].name || "").toLowerCase();
+                if (products[i].id === 1 || products[i].id === 5 || n.includes("utility hub") || n === "gakuran full script") {
+                    products.splice(i, 1);
+                }
+            }
             for (const p of products) {
-                if (ids.includes(p.id) || (p.name && p.name.toLowerCase().includes("full")) || (p.name && p.name.toLowerCase().includes("premium")) || (p.name && p.name.toLowerCase().includes("essai"))) {
+                if ([9,10].includes(p.id) || /premium|essai/i.test(p.name || "")) {
                     p.image = prem;
                 }
             }
+            const main = products.find(p => p.id === 9);
+            if (main) {
+                main.name = "Gakuran Premium All-in-One";
+                main.description = "Pack principal Volcano Gakuran : ESP, hitbox, barres HP, Fly, NoClip, Speed, Attach, TP. Menu premium mis a jour.";
+            }
         })();
-
 
         let cart = JSON.parse(localStorage.getItem('vocalypse_cart') || '[]');
         let currentFilter = 'all';
