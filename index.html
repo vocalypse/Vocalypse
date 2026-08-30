@@ -618,6 +618,17 @@
                 stripeUrl: "https://buy.stripe.com/6oU5kD7Bn2rW1EIdz6djO08"
             }
         ];
+        // Images premium Volcano Gakuran
+        (function(){
+            const prem = "assets/premium.jpg";
+            const ids = [1,5,9,10];
+            for (const p of products) {
+                if (ids.includes(p.id) || (p.name && p.name.toLowerCase().includes("full")) || (p.name && p.name.toLowerCase().includes("premium")) || (p.name && p.name.toLowerCase().includes("essai"))) {
+                    p.image = prem;
+                }
+            }
+        })();
+
 
         let cart = JSON.parse(localStorage.getItem('vocalypse_cart') || '[]');
         let currentFilter = 'all';
