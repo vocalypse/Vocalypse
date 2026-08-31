@@ -53,27 +53,12 @@
                 <span class="px-3 py-1 rounded-full bg-red-600/20 text-red-300 text-xs font-medium">1 utilisateur</span>
             </div>
 
-            <div class="p-5 space-y-5">
-                <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <label class="text-sm text-stone-400">Ta cle KeyAuth</label>
-                        <button onclick="copyKey()" class="text-xs text-red-400 hover:text-red-300">
-                            <i class="fas fa-copy mr-1"></i> Copier
-                        </button>
-                    </div>
-                    <input id="key-field" readonly class="w-full bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 font-mono text-emerald-400 text-sm" value="">
-                    <p class="text-xs text-stone-500 mt-2">Cette cle est liee a 1 seul PC (anti-share).</p>
-                </div>
-
-                <div>
-                    <div class="flex items-center justify-between mb-2">
-                        <label class="text-sm text-stone-400">Script a coller dans Xeno</label>
-                        <button onclick="copyScript()" class="text-xs text-red-400 hover:text-red-300">
-                            <i class="fas fa-copy mr-1"></i> Copier
-                        </button>
-                    </div>
-                    <pre id="script-field" class="bg-dark-900 border border-dark-600 rounded-xl px-4 py-3 font-mono text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all"></pre>
-                </div>
+            <div class="p-5 space-y-4 text-sm text-stone-300">
+                <p>Ta <strong class="text-white">vraie cle KeyAuth</strong> est generee automatiquement et envoyee sur Discord (pas la fausse cle VOCAL-).</p>
+                <a href="https://discord.gg/EspM9qvxbG" target="_blank" class="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium">
+                    <i class="fab fa-discord"></i> Rejoindre Discord pour recuperer la cle
+                </a>
+                <p class="text-xs text-stone-500">Ouvre un ticket ou contacte le staff avec l'email utilise pour Stripe. La cle est unique (1 PC).</p>
             </div>
         </div>
 
@@ -92,7 +77,7 @@
                 </li>
                 <li class="flex gap-3">
                     <span class="w-6 h-6 rounded-full bg-red-600/20 text-red-400 flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
-                    <span>Copie ta <strong>cle</strong> et le <strong>script</strong> ci-dessus, colle-les dans le launcher (la cle doit etre dans le script pour que ca fonctionne), puis clique sur <strong>Execute</strong>.</span>
+                    <span>Recupere ta <strong>cle</strong> et le bloc Xeno sur <strong>Discord</strong>, colle-les dans le launcher, puis <strong>Execute</strong>.</span>
                 </li>
                 <li class="flex gap-3">
                     <span class="w-6 h-6 rounded-full bg-red-600/20 text-red-400 flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
@@ -109,54 +94,23 @@
 
     <script>
         // Noms des scripts selon ?p=
+        const DEFAULT_LOADER = "https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/loader.lua";
+        const ESP_URL = "https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/esp.lua";
         const scripts = {
-            '1': { name: 'Volcano Gakuran Hub (Full)' },
-            '2': { name: 'Gakuran ESP Pro' },
-            '3': { name: 'Fly + NoClip Pack' },
-            '4': { name: 'Gakuran Emote Menu' },
-            '5': { name: 'Volcano Gakuran Hub (Full)' },
-            '6': { name: 'NoClip Advanced' },
-            '9': { name: 'Volcano Gakuran Hub (Full)' },
-            '10': { name: 'Essai Full Script — 1 heure' }
+            '1': { name: 'Volcano Gakuran Hub (Full)', url: DEFAULT_LOADER },
+            '2': { name: 'Gakuran ESP + Hitbox', url: ESP_URL },
+            '3': { name: 'Fly + NoClip Pack', url: DEFAULT_LOADER },
+            '4': { name: 'Gakuran Emote Menu', url: DEFAULT_LOADER },
+            '5': { name: 'Volcano Gakuran Hub (Full)', url: DEFAULT_LOADER },
+            '6': { name: 'NoClip Advanced', url: DEFAULT_LOADER },
+            '9': { name: 'Gakuran Premium All-in-One', url: DEFAULT_LOADER },
+            '10': { name: 'Essai Premium — 1 heure', url: DEFAULT_LOADER }
         };
-
-        // IMPORTANT: quand ton copain aura le loader KeyAuth,
-        // remplace LOADER_URL ci-dessous par le vrai lien du script.
-        const LOADER_URL = "https://raw.githubusercontent.com/vocalypse/Vocalypse/main/scripts/loader.lua";
-
-        function genKey() {
-            const p = () => Math.random().toString(36).substring(2, 6).toUpperCase();
-            return 'VOCAL-' + p() + '-' + p() + '-' + p();
-        }
 
         const params = new URLSearchParams(location.search);
         const id = params.get('p') || '1';
-        const info = scripts[id] || scripts['1'];
-
-        // Pour l'instant cle generee sur la page.
-        // Plus tard: tu mettras ici une vraie cle KeyAuth apres chaque vente.
-        const key = genKey();
-
+        const info = scripts[id] || scripts['9'];
         document.getElementById('script-name').textContent = info.name;
-        document.getElementById('key-field').value = key;
-
-        // Format KeyAuth classique: script_key + loadstring
-        const scriptText =
-            'script_key = "' + key + '";\n' +
-            'loadstring(game:HttpGet("' + LOADER_URL + '"))()\n' +
-            '\n-- Vocalypse | ' + info.name + '\n' +
-            '-- 1 utilisateur (HWID) — ne pas partager';
-
-        document.getElementById('script-field').textContent = scriptText.replace(/\\n/g, '\n');
-
-        function copyKey() {
-            navigator.clipboard.writeText(document.getElementById('key-field').value);
-            alert('Cle copiee !');
-        }
-        function copyScript() {
-            navigator.clipboard.writeText(document.getElementById('script-field').textContent);
-            alert('Script copie ! Colle-le dans Xeno.');
-        }
     </script>
 </body>
 </html>
