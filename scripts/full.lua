@@ -1,179 +1,169 @@
 -- =============================================
--- VOLCANO GAKURAN HUB
--- Fly / Noclip / Speed / Jump / ESP / TP / Attach
--- Vocalypse - lifetime + updates via loadstring
+-- 🌋🌸 VOLCANO GAKURAN HUB 🌸🌋
+-- by vulcalypse
 -- =============================================
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
+local ZERO = Vector3.zero
+local ESP_COLOR = Color3.fromRGB(64, 224, 208)
 
--- Anti-Double
-for _, v in pairs(game:GetService("CoreGui"):GetChildren()) do
-	if v.Name == "VolcanoGakuranHub" then
-		v:Destroy()
-	end
+local parentGui = gethui and gethui() or game:GetService("CoreGui")
+for _, v in ipairs(parentGui:GetChildren()) do
+	if v.Name == "VolcanoGakuranHub" then v:Destroy() end
 end
 
--- ====================== VARIABLES ======================
-local highlightsEnabled = true
-local namesEnabled = true
-local maxDistance = 2000
-
-local noclip = false
-local infiniteJump = false
-local speedEnabled = false
-local flyEnabled = false
-local flySpeed = 60
-local turbo = false
-
-local isAttached = false
-local currentTarget = nil
-local attachConnection = nil
-local wasFlyingBeforeAttach = false
-
+local highlightsEnabled, namesEnabled, healthEnabled, selfHealthEnabled = true, true, true, true
+local maxDistance, flySpeed, walkSpeed = 2000, 60, 100
+local noclip, infiniteJump, speedEnabled, flyEnabled, turbo = false, false, false, false, false
+local isAttached, currentTarget, attachConnection, wasFlyingBeforeAttach = false, nil, nil, false
+local attachMode, attachSpeed = "cercle", 5.2
+local ATTACH_Y, DOS_Z, ORBIT_RADIUS = 0.65, 2.05, 2.05
 local character, humanoid, rootPart
-local bodyVelocity, bodyGyro
-local flyConnection
-local noclipConnection
-local hue = 0
-local lastESPUpdate = 0
+local bodyVelocity, bodyGyro, flyConnection, noclipConnection, speedConnection
+local scriptAlive, lastESP = true, 0
 
--- ====================== CHARACTER ======================
+local connections, noclipParts = table.create(32), table.create(16)
+local function track(c) connections[#connections+1] = c return c end
+
 local function updateCharacter()
 	character = LocalPlayer.Character
-	if not character then
-		humanoid = nil
-		rootPart = nil
-		return
-	end
+	if not character then humanoid, rootPart = nil, nil return end
 	humanoid = character:FindFirstChildOfClass("Humanoid")
 	rootPart = character:FindFirstChild("HumanoidRootPart")
 end
 
--- ====================== FLY ======================
 local function stopFly()
-	if flyConnection then
-		flyConnection:Disconnect()
-		flyConnection = nil
-	end
-	if bodyVelocity then
-		bodyVelocity:Destroy()
-		bodyVelocity = nil
-	end
-	if bodyGyro then
-		bodyGyro:Destroy()
-		bodyGyro = nil
-	end
-	if humanoid then
-		humanoid.PlatformStand = false
-	end
+	if flyConnection then flyConnection:Disconnect() flyConnection = nil end
+	if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
+	if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
+	if humanoid then humanoid.PlatformStand = false end
 end
 
 local function startFly()
+	if not scriptAlive then return end
 	stopFly()
 	updateCharacter()
-	if not character or not humanoid or not rootPart then return end
-
+	if not humanoid or not rootPart then return end
 	humanoid.PlatformStand = true
-
 	bodyVelocity = Instance.new("BodyVelocity")
-	bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-	bodyVelocity.Velocity = Vector3.zero
-	bodyVelocity.Parent = rootPart
-
+	bodyVelocity.MaxForce, bodyVelocity.Velocity, bodyVelocity.Parent = Vector3.new(1e9, 1e9, 1e9), ZERO, rootPart
 	bodyGyro = Instance.new("BodyGyro")
-	bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-	bodyGyro.P = 9e4
-	bodyGyro.Parent = rootPart
-
-	flyConnection = RunService.RenderStepped:Connect(function()
-		if not flyEnabled or isAttached or not rootPart or not bodyVelocity or not bodyGyro then
-			return
-		end
-
-		local cam = workspace.CurrentCamera
-		local move = Vector3.zero
-
-		if UIS:IsKeyDown(Enum.KeyCode.W) then move += cam.CFrame.LookVector end
-		if UIS:IsKeyDown(Enum.KeyCode.S) then move -= cam.CFrame.LookVector end
-		if UIS:IsKeyDown(Enum.KeyCode.A) then move -= cam.CFrame.RightVector end
-		if UIS:IsKeyDown(Enum.KeyCode.D) then move += cam.CFrame.RightVector end
-		if UIS:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0, 1, 0) end
-		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0, 1, 0) end
-
-		local speed = flySpeed * (turbo and 2.2 or 1)
-		bodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * speed or Vector3.zero
-		bodyGyro.CFrame = cam.CFrame
+	bodyGyro.MaxTorque, bodyGyro.P, bodyGyro.Parent = Vector3.new(1e9, 1e9, 1e9), 9e4, rootPart
+	flyConnection = RunService.Heartbeat:Connect(function()
+		if not (scriptAlive and flyEnabled and not isAttached and rootPart and bodyVelocity and bodyGyro) then return end
+		local cf = workspace.CurrentCamera.CFrame
+		local move = ZERO
+		if UIS:IsKeyDown(Enum.KeyCode.W) then move += cf.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then move -= cf.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then move -= cf.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then move += cf.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.yAxis end
+		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.yAxis end
+		bodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * (flySpeed * (turbo and 2.2 or 1)) or ZERO
+		bodyGyro.CFrame = cf
 	end)
 end
 
--- ====================== NOCLIP ======================
-local function stopNoclip()
-	if noclipConnection then
-		noclipConnection:Disconnect()
-		noclipConnection = nil
+local function stopSpeed()
+	if speedConnection then speedConnection:Disconnect() speedConnection = nil end
+	if humanoid and not flyEnabled then humanoid.WalkSpeed = 16 humanoid.PlatformStand = false end
+end
+
+local function startSpeed()
+	if speedConnection then speedConnection:Disconnect() end
+	speedConnection = RunService.Heartbeat:Connect(function(dt)
+		if not (scriptAlive and speedEnabled) or flyEnabled or isAttached then return end
+		if not humanoid or not rootPart or not humanoid.Parent then updateCharacter() if not humanoid or not rootPart then return end end
+		humanoid.PlatformStand = false
+		local spd = turbo and walkSpeed * 2 or walkSpeed
+		if humanoid.WalkSpeed ~= spd then humanoid.WalkSpeed = spd end
+		local md, v = humanoid.MoveDirection, rootPart.AssemblyLinearVelocity
+		local tx, tz = 0, 0
+		if md.Magnitude > 0.08 then
+			local d = Vector3.new(md.X, 0, md.Z)
+			if d.Magnitude > 0 then d = d.Unit tx, tz = d.X * spd, d.Z * spd end
+		end
+		local a = dt * 14
+		if a > 1 then a = 1 end
+		rootPart.AssemblyLinearVelocity = Vector3.new(v.X + (tx - v.X) * a, v.Y, v.Z + (tz - v.Z) * a)
+	end)
+end
+
+local function cacheNoclipParts()
+	table.clear(noclipParts)
+	if not character then return end
+	for _, p in ipairs(character:GetDescendants()) do
+		if p:IsA("BasePart") then noclipParts[#noclipParts+1] = p end
 	end
+end
+
+local function stopNoclip()
+	if noclipConnection then noclipConnection:Disconnect() noclipConnection = nil end
 end
 
 local function startNoclip()
 	stopNoclip()
+	cacheNoclipParts()
 	noclipConnection = RunService.Stepped:Connect(function()
-		if not noclip or not character then return end
-		for _, part in ipairs(character:GetDescendants()) do
-			if part:IsA("BasePart") then
-				part.CanCollide = false
-			end
+		if not (scriptAlive and noclip) then return end
+		for i = 1, #noclipParts do
+			local p = noclipParts[i]
+			if p and p.Parent then p.CanCollide = false end
 		end
 	end)
 end
 
--- ====================== SETUP ======================
-local function onCharacterAdded(char)
-	character = char
-	humanoid = char:WaitForChild("Humanoid", 8)
-	rootPart = char:WaitForChild("HumanoidRootPart", 8)
-
-	isAttached = false
-	currentTarget = nil
-	wasFlyingBeforeAttach = false
-	if attachConnection then
-		attachConnection:Disconnect()
-		attachConnection = nil
-	end
-
-	stopFly()
-
-	task.wait(0.5)
-
-	if speedEnabled and humanoid then
-		humanoid.WalkSpeed = turbo and 100 or 50
-	end
-	if flyEnabled then
-		startFly()
-	end
-	if noclip then
-		startNoclip()
-	end
+local function hpCol(r)
+	if r > 0.6 then return Color3.fromRGB(80, 220, 120) end
+	if r > 0.3 then return Color3.fromRGB(255, 200, 70) end
+	return Color3.fromRGB(255, 70, 70)
 end
 
-if LocalPlayer.Character then
-	onCharacterAdded(LocalPlayer.Character)
+local function updateHealthTag(player)
+	local char = player.Character
+	if not char then return end
+	local tag = char:FindFirstChild("VolcanoHealthTag")
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if not tag or not hum then return end
+	local fill = tag.BarBg and tag.BarBg:FindFirstChild("Fill")
+	local label = tag:FindFirstChild("HPText")
+	local ratio = hum.Health / math.max(hum.MaxHealth, 1)
+	if ratio < 0 then ratio = 0 elseif ratio > 1 then ratio = 1 end
+	local col = hpCol(ratio)
+	if fill then fill.Size = UDim2.new(ratio, 0, 1, 0) fill.BackgroundColor3 = col end
+	if label then label.Text = math.floor(hum.Health + 0.5) .. " / " .. math.floor(hum.MaxHealth + 0.5) label.TextColor3 = col end
 end
-LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
 
-LocalPlayer.CharacterRemoving:Connect(function()
-	stopFly()
-	stopNoclip()
-	character = nil
-	humanoid = nil
-	rootPart = nil
-end)
+local function createHealthTag(player)
+	if player == LocalPlayer then if not selfHealthEnabled then return end elseif not healthEnabled then return end
+	local char = player.Character
+	if not char or char:FindFirstChild("VolcanoHealthTag") then return end
+	local head = char:FindFirstChild("Head")
+	if not head then return end
+	local bb = Instance.new("BillboardGui")
+	bb.Name, bb.Adornee, bb.Size = "VolcanoHealthTag", head, UDim2.new(4.2, 0, 1.15, 0)
+	bb.StudsOffset, bb.AlwaysOnTop, bb.MaxDistance = Vector3.new(0, 2.55, 0), true, 1e5
+	local bg = Instance.new("Frame")
+	bg.Name, bg.Size, bg.Position = "BarBg", UDim2.new(0.92, 0, 0.32, 0), UDim2.new(0.04, 0, 0.08, 0)
+	bg.BackgroundColor3, bg.BorderSizePixel, bg.Parent = Color3.fromRGB(28, 16, 24), 0, bb
+	Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 4)
+	local fill = Instance.new("Frame")
+	fill.Name, fill.Size, fill.BackgroundColor3, fill.BorderSizePixel, fill.Parent = "Fill", UDim2.new(1, 0, 1, 0), Color3.fromRGB(80, 220, 120), 0, bg
+	Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 4)
+	local t = Instance.new("TextLabel")
+	t.Name, t.Size, t.Position = "HPText", UDim2.new(1, 0, 0.55, 0), UDim2.new(0, 0, 0.42, 0)
+	t.BackgroundTransparency, t.Font, t.TextScaled, t.TextStrokeTransparency, t.Parent = 1, Enum.Font.GothamBold, true, 0, bb
+	bb.Parent = char
+	updateHealthTag(player)
+end
 
--- ====================== ESP ======================
-local function getTeamColor(player)
-	return (player.Team and player.Team.TeamColor.Color) or Color3.fromRGB(255, 120, 50)
+local function removeHealthTag(player)
+	local char = player.Character
+	local tag = char and char:FindFirstChild("VolcanoHealthTag")
+	if tag then tag:Destroy() end
 end
 
 local function createNameTag(player)
@@ -182,674 +172,476 @@ local function createNameTag(player)
 	if not char or char:FindFirstChild("VolcanoNameTag") then return end
 	local head = char:FindFirstChild("Head")
 	if not head then return end
-
-	local billboard = Instance.new("BillboardGui")
-	billboard.Name = "VolcanoNameTag"
-	billboard.Adornee = head
-	billboard.Size = UDim2.new(4, 0, 1.4, 0)
-	billboard.StudsOffset = Vector3.new(0, 3.6, 0)
-	billboard.AlwaysOnTop = true
-	billboard.MaxDistance = maxDistance
-
-	local text = Instance.new("TextLabel")
-	text.Size = UDim2.new(1, 0, 1, 0)
-	text.BackgroundTransparency = 1
-	text.Text = player.Name
-	text.TextColor3 = getTeamColor(player)
-	text.TextStrokeTransparency = 0
-	text.TextStrokeColor3 = Color3.new(0, 0, 0)
-	text.TextScaled = true
-	text.Font = Enum.Font.GothamBold
-	text.Parent = billboard
-	billboard.Parent = char
+	local bb = Instance.new("BillboardGui")
+	bb.Name, bb.Adornee, bb.Size = "VolcanoNameTag", head, UDim2.new(4, 0, 1.4, 0)
+	bb.StudsOffset, bb.AlwaysOnTop, bb.MaxDistance = Vector3.new(0, 3.6, 0), true, maxDistance
+	local t = Instance.new("TextLabel")
+	t.Size, t.BackgroundTransparency, t.Text = UDim2.new(1, 0, 1, 0), 1, "🌸 " .. player.Name
+	t.TextColor3, t.TextStrokeTransparency, t.TextScaled, t.Font, t.Parent = ESP_COLOR, 0, true, Enum.Font.GothamBold, bb
+	bb.Parent = char
 end
 
 local function createHighlight(player)
 	local char = player.Character
 	if not char or char:FindFirstChild("VolcanoHighlight") then return end
 	local hl = Instance.new("Highlight")
-	hl.Name = "VolcanoHighlight"
-	hl.Adornee = char
-	hl.FillColor = getTeamColor(player)
-	hl.OutlineColor = getTeamColor(player)
-	hl.FillTransparency = 0.55
-	hl.OutlineTransparency = 0.15
-	hl.Parent = char
+	hl.Name, hl.Adornee, hl.FillColor, hl.OutlineColor = "VolcanoHighlight", char, ESP_COLOR, ESP_COLOR
+	hl.FillTransparency, hl.OutlineTransparency, hl.Parent = 0.55, 0.15, char
 end
 
 local function removeHighlight(player)
 	local char = player.Character
-	if char then
-		local hl = char:FindFirstChild("VolcanoHighlight")
-		if hl then hl:Destroy() end
+	local hl = char and char:FindFirstChild("VolcanoHighlight")
+	if hl then hl:Destroy() end
+end
+
+local function clearAllESP()
+	for _, p in ipairs(Players:GetPlayers()) do
+		removeHighlight(p) removeHealthTag(p)
+		local char = p.Character
+		local tag = char and char:FindFirstChild("VolcanoNameTag")
+		if tag then tag:Destroy() end
 	end
 end
 
 local function updateESP()
+	if not scriptAlive then return end
 	local now = os.clock()
-	if now - lastESPUpdate < 0.7 then return end
-	lastESPUpdate = now
-
-	local localChar = LocalPlayer.Character
-	if not localChar or not localChar.PrimaryPart then return end
-	local localPos = localChar.PrimaryPart.Position
-
-	for _, p in ipairs(Players:GetPlayers()) do
+	if now - lastESP < 0.4 then return end
+	lastESP = now
+	local myRoot = LocalPlayer.Character and LocalPlayer.Character.PrimaryPart
+	if not myRoot then return end
+	local pos = myRoot.Position
+	if selfHealthEnabled then createHealthTag(LocalPlayer) updateHealthTag(LocalPlayer) end
+	local listP = Players:GetPlayers()
+	for i = 1, #listP do
+		local p = listP[i]
 		if p ~= LocalPlayer then
 			local char = p.Character
-			if char and char.PrimaryPart then
-				local dist = (localPos - char.PrimaryPart.Position).Magnitude
-				if highlightsEnabled then
-					if dist <= maxDistance then
-						createHighlight(p)
-					else
-						removeHighlight(p)
+			local root = char and char.PrimaryPart
+			if root then
+				local ok = (pos - root.Position).Magnitude <= maxDistance
+				if highlightsEnabled then if ok then createHighlight(p) else removeHighlight(p) end else removeHighlight(p) end
+				if namesEnabled then
+					if ok then createNameTag(p) else
+						local tag = char:FindFirstChild("VolcanoNameTag")
+						if tag then tag:Destroy() end
 					end
 				end
-				if namesEnabled and not char:FindFirstChild("VolcanoNameTag") then
-					createNameTag(p)
+				if healthEnabled then
+					if ok then createHealthTag(p) updateHealthTag(p) else removeHealthTag(p) end
 				end
 			end
 		end
 	end
 end
 
--- ====================== ATTACH ======================
-local OFFSET = CFrame.new(0, 0.6, 1.7)
+local function onCharacterAdded(char)
+	if not scriptAlive then return end
+	character = char
+	humanoid = char:WaitForChild("Humanoid", 8)
+	rootPart = char:WaitForChild("HumanoidRootPart", 8)
+	isAttached, currentTarget, wasFlyingBeforeAttach = false, nil, false
+	if attachConnection then attachConnection:Disconnect() attachConnection = nil end
+	stopFly()
+	cacheNoclipParts()
+	char.DescendantAdded:Connect(function(d)
+		if d:IsA("BasePart") then noclipParts[#noclipParts+1] = d end
+	end)
+	task.wait(0.35)
+	if not scriptAlive then return end
+	if speedEnabled then startSpeed() end
+	if flyEnabled then startFly() end
+	if noclip then startNoclip() end
+	if selfHealthEnabled then createHealthTag(LocalPlayer) end
+end
+
+if LocalPlayer.Character then task.spawn(onCharacterAdded, LocalPlayer.Character) end
+track(LocalPlayer.CharacterAdded:Connect(onCharacterAdded))
+track(LocalPlayer.CharacterRemoving:Connect(function()
+	stopFly() stopNoclip() stopSpeed()
+	character, humanoid, rootPart = nil, nil, nil
+	table.clear(noclipParts)
+end))
+
+local refreshUI
 
 local function StopAttach()
-	isAttached = false
-	currentTarget = nil
-	if attachConnection then
-		attachConnection:Disconnect()
-		attachConnection = nil
-	end
-
-	if wasFlyingBeforeAttach then
+	isAttached, currentTarget = false, nil
+	if attachConnection then attachConnection:Disconnect() attachConnection = nil end
+	if rootPart then rootPart.AssemblyLinearVelocity = ZERO rootPart.AssemblyAngularVelocity = ZERO end
+	if scriptAlive and wasFlyingBeforeAttach then
 		wasFlyingBeforeAttach = false
 		flyEnabled = true
-		task.delay(0.3, function()
-			startFly()
-			if flyBtn then
-				flyBtn.Text = "FLY : ON (" .. flySpeed .. ")"
-				flyBtn.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
-			end
-		end)
+		task.delay(0.12, function() if scriptAlive then startFly() end if refreshUI then refreshUI() end end)
+	else
+		wasFlyingBeforeAttach = false
 	end
+	if refreshUI then refreshUI() end
 end
 
 local function AttachToPlayer(target)
-	if not target or not target.Character then return end
-	local tHRP = target.Character:FindFirstChild("HumanoidRootPart")
-	local myChar = LocalPlayer.Character
-	if not myChar or not tHRP then return end
-	local myHRP = myChar:FindFirstChild("HumanoidRootPart")
-	if not myHRP then return end
-
+	if not (scriptAlive and target and target.Character) then return end
+	local th0 = target.Character:FindFirstChild("HumanoidRootPart")
+	updateCharacter()
+	if not th0 or not rootPart then return end
+	StopAttach()
 	wasFlyingBeforeAttach = flyEnabled
-
-	if flyEnabled then
-		flyEnabled = false
-		stopFly()
-		if flyBtn then
-			flyBtn.Text = "FLY : OFF (" .. flySpeed .. ")"
-			flyBtn.BackgroundColor3 = Color3.fromRGB(32, 20, 38)
-		end
+	if flyEnabled then flyEnabled = false stopFly() end
+	currentTarget, isAttached = target, true
+	for i = 1, #noclipParts do
+		local p = noclipParts[i]
+		if p and p.Parent then p.CanCollide = false end
 	end
-
-	if attachConnection then
-		attachConnection:Disconnect()
-		attachConnection = nil
-	end
-
-	currentTarget = target
-	isAttached = true
-
-	for _, part in ipairs(myChar:GetDescendants()) do
-		if part:IsA("BasePart") then
-			part.CanCollide = false
-		end
-	end
-
-	attachConnection = RunService.Heartbeat:Connect(function()
-		if not isAttached or not currentTarget or not currentTarget.Character then
-			StopAttach()
+	attachConnection = RunService.Heartbeat:Connect(function(dt)
+		if not isAttached or not scriptAlive or not currentTarget then
+			if attachConnection then attachConnection:Disconnect() attachConnection = nil end
 			return
 		end
-		local tHRP = currentTarget.Character:FindFirstChild("HumanoidRootPart")
-		local mHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-		if not tHRP or not mHRP then
-			StopAttach()
-			return
+		local tchar = currentTarget.Character
+		local th = tchar and tchar:FindFirstChild("HumanoidRootPart")
+		local mh = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+		if not th or not mh then StopAttach() return end
+		local vel = th.AssemblyLinearVelocity
+		local predicted = th.Position + vel * (dt > 0.04 and 0.08 or dt * 2)
+		if attachMode == "dos" then
+			mh.CFrame = CFrame.new(predicted) * (th.CFrame - th.Position) * CFrame.new(0, ATTACH_Y, DOS_Z)
+		else
+			local ang = os.clock() * attachSpeed
+			mh.CFrame = CFrame.new(predicted + Vector3.new(math.cos(ang) * ORBIT_RADIUS, ATTACH_Y, math.sin(ang) * ORBIT_RADIUS), predicted + Vector3.new(0, 1.2, 0))
 		end
-		mHRP.CFrame = tHRP.CFrame * OFFSET
-		mHRP.AssemblyLinearVelocity = Vector3.zero
-		mHRP.AssemblyAngularVelocity = Vector3.zero
+		mh.AssemblyLinearVelocity = vel
+		mh.AssemblyAngularVelocity = ZERO
 	end)
+	if refreshUI then refreshUI() end
 end
 
--- ====================== GUI ======================
-local gui = Instance.new("ScreenGui")
-gui.Name = "VolcanoGakuranHub"
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-gui.DisplayOrder = 99999
-local okGui, guiParent = pcall(function()
-	if gethui then return gethui() end
-	return game:GetService("CoreGui")
-end)
-gui.Parent = (okGui and guiParent) or game:GetService("CoreGui")
-if not gui.Parent then
-	gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local function TeleportTo(player)
+	local a, b = LocalPlayer.Character, player.Character
+	if a and a.PrimaryPart and b and b.PrimaryPart then
+		a:PivotTo(b.PrimaryPart.CFrame + Vector3.new(0, 3, 0))
+		if flyEnabled then task.delay(0.2, startFly) end
+	end
 end
+
+local COL_BG = Color3.fromRGB(22, 14, 20)
+local COL_PANEL = Color3.fromRGB(34, 20, 30)
+local COL_ROW = Color3.fromRGB(38, 22, 34)
+local COL_ACCENT = Color3.fromRGB(255, 145, 190)
+local COL_TEXT = Color3.fromRGB(255, 230, 238)
+local COL_MUTED = Color3.fromRGB(190, 150, 168)
+
+local gui = Instance.new("ScreenGui")
+gui.Name, gui.ResetOnSpawn, gui.IgnoreGuiInset, gui.DisplayOrder = "VolcanoGakuranHub", false, true, 99999
+gui.Parent = parentGui
 
 local main = Instance.new("Frame")
-main.Size = UDim2.new(0, 440, 0, 540)
-main.Position = UDim2.new(0.5, -220, 0.5, -270)
-main.BackgroundColor3 = Color3.fromRGB(16, 12, 20)
-main.BorderSizePixel = 0
-main.Active = true
-main.Draggable = true
-main.Visible = true
-main.Parent = gui
-Instance.new("UICorner", main).CornerRadius = UDim.new(0, 20)
+main.Size, main.Position = UDim2.new(0, 540, 0, 580), UDim2.new(0.5, -270, 0.5, -290)
+main.BackgroundColor3, main.BorderSizePixel = COL_BG, 0
+main.Active, main.Draggable, main.Visible, main.Parent = true, true, false, gui
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 14)
+local stk = Instance.new("UIStroke")
+stk.Color, stk.Thickness, stk.Parent = Color3.fromRGB(255, 140, 185), 1.4, main
 
-local border = Instance.new("UIStroke")
-border.Thickness = 3.5
-border.Color = Color3.fromRGB(255, 105, 180)
-border.Parent = main
+local top = Instance.new("Frame")
+top.Size, top.BackgroundColor3, top.BorderSizePixel, top.Parent = UDim2.new(1, 0, 0, 3), COL_ACCENT, 0, main
+Instance.new("UICorner", top).CornerRadius = UDim.new(0, 14)
 
 local header = Instance.new("Frame")
-header.Size = UDim2.new(1, 0, 0, 55)
-header.BackgroundColor3 = Color3.fromRGB(22, 14, 28)
-header.BorderSizePixel = 0
-header.Parent = main
-Instance.new("UICorner", header).CornerRadius = UDim.new(0, 20)
+header.Size, header.Position, header.BackgroundTransparency, header.Parent = UDim2.new(1, -16, 0, 42), UDim2.new(0, 8, 0, 10), 1, main
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -60, 1, 0)
-title.Position = UDim2.new(0, 15, 0, 0)
-title.BackgroundTransparency = 1
-title.Text = "VOLCANO GAKURAN"
-title.Font = Enum.Font.GothamBlack
-title.TextSize = 19
-title.TextColor3 = Color3.fromRGB(255, 130, 180)
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.Parent = header
+local brand = Instance.new("TextLabel")
+brand.Size, brand.BackgroundTransparency, brand.Text = UDim2.new(1, -280, 1, 0), 1, "🌸  volcano gakuran  🌸"
+brand.Font, brand.TextSize, brand.TextColor3, brand.TextXAlignment, brand.Parent = Enum.Font.GothamBold, 16, COL_ACCENT, Enum.TextXAlignment.Left, header
 
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 36, 0, 36)
-closeBtn.Position = UDim2.new(1, -45, 0, 10)
-closeBtn.Text = "X"
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 18
-closeBtn.BackgroundColor3 = Color3.fromRGB(50, 25, 40)
-closeBtn.TextColor3 = Color3.fromRGB(255, 180, 200)
-closeBtn.Parent = header
-Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(1, 0)
+local byline = Instance.new("TextLabel")
+byline.Size, byline.Position = UDim2.new(0, 110, 1, 0), UDim2.new(1, -260, 0, 0)
+byline.BackgroundTransparency, byline.Text = 1, "by vulcalypse"
+byline.Font, byline.TextSize, byline.TextColor3, byline.TextXAlignment, byline.Parent = Enum.Font.Gotham, 12, COL_MUTED, Enum.TextXAlignment.Right, header
 
-local tabFrame = Instance.new("Frame")
-tabFrame.Size = UDim2.new(1, -20, 0, 38)
-tabFrame.Position = UDim2.new(0, 10, 0, 63)
-tabFrame.BackgroundTransparency = 1
-tabFrame.Parent = main
-
-local function createTab(text, x)
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 100, 1, 0)
-	btn.Position = UDim2.new(0, x, 0, 0)
-	btn.Text = text
-	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 13
-	btn.BackgroundColor3 = Color3.fromRGB(35, 22, 40)
-	btn.TextColor3 = Color3.fromRGB(220, 180, 200)
-	btn.Parent = tabFrame
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 9)
-	return btn
+local function iconBtn(txt, x)
+	local b = Instance.new("TextButton")
+	b.Size, b.Position = UDim2.new(0, 42, 0, 28), UDim2.new(1, x, 0.5, -14)
+	b.BackgroundColor3, b.Text, b.Font, b.TextSize, b.TextColor3, b.Parent = Color3.fromRGB(50, 28, 42), txt, Enum.Font.GothamBold, 12, COL_TEXT, header
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+	return b
 end
+local endBtn, closeBtn = iconBtn("End", -140), iconBtn("✕", -90)
 
-local tabMove = createTab("MOVE", 0)
-local tabESP = createTab("ESP", 105)
-local tabTP = createTab("TP", 210)
-local tabAttach = createTab("ATTACH", 315)
+local search = Instance.new("TextBox")
+search.Size, search.Position = UDim2.new(1, -24, 0, 36), UDim2.new(0, 12, 0, 56)
+search.BackgroundColor3, search.PlaceholderText, search.PlaceholderColor3 = COL_PANEL, "Search commands...", COL_MUTED
+search.Text, search.TextColor3, search.Font, search.TextSize, search.ClearTextOnFocus, search.Parent = "", COL_TEXT, Enum.Font.Gotham, 14, false, main
+Instance.new("UICorner", search).CornerRadius = UDim.new(0, 10)
 
-local content = Instance.new("Frame")
-content.Size = UDim2.new(1, -20, 1, -115)
-content.Position = UDim2.new(0, 10, 0, 108)
-content.BackgroundTransparency = 1
-content.Parent = main
+local chipBar = Instance.new("ScrollingFrame")
+chipBar.Size, chipBar.Position, chipBar.BackgroundTransparency = UDim2.new(1, -24, 0, 34), UDim2.new(0, 12, 0, 100), 1
+chipBar.ScrollBarThickness, chipBar.CanvasSize, chipBar.Parent = 0, UDim2.new(0, 520, 0, 0), main
+local chipLay = Instance.new("UIListLayout")
+chipLay.FillDirection, chipLay.Padding, chipLay.Parent = Enum.FillDirection.Horizontal, UDim.new(0, 6), chipBar
 
-local pageMove = Instance.new("Frame")
-pageMove.Size = UDim2.new(1, 0, 1, 0)
-pageMove.BackgroundTransparency = 1
-pageMove.Visible = true
-pageMove.Parent = content
-
-local pageESP = Instance.new("Frame")
-pageESP.Size = UDim2.new(1, 0, 1, 0)
-pageESP.BackgroundTransparency = 1
-pageESP.Visible = false
-pageESP.Parent = content
-
-local pageTP = Instance.new("Frame")
-pageTP.Size = UDim2.new(1, 0, 1, 0)
-pageTP.BackgroundTransparency = 1
-pageTP.Visible = false
-pageTP.Parent = content
-
-local pageAttach = Instance.new("Frame")
-pageAttach.Size = UDim2.new(1, 0, 1, 0)
-pageAttach.BackgroundTransparency = 1
-pageAttach.Visible = false
-pageAttach.Parent = content
-
-local function switchTab(tab)
-	pageMove.Visible = tab == "MOVE"
-	pageESP.Visible = tab == "ESP"
-	pageTP.Visible = tab == "TP"
-	pageAttach.Visible = tab == "ATTACH"
-	tabMove.BackgroundColor3 = tab == "MOVE" and Color3.fromRGB(255, 90, 140) or Color3.fromRGB(35, 22, 40)
-	tabESP.BackgroundColor3 = tab == "ESP" and Color3.fromRGB(255, 90, 140) or Color3.fromRGB(35, 22, 40)
-	tabTP.BackgroundColor3 = tab == "TP" and Color3.fromRGB(255, 90, 140) or Color3.fromRGB(35, 22, 40)
-	tabAttach.BackgroundColor3 = tab == "ATTACH" and Color3.fromRGB(255, 90, 140) or Color3.fromRGB(35, 22, 40)
+local currentCat, chips = "all", {}
+local function makeChip(id, label)
+	local b = Instance.new("TextButton")
+	b.Size, b.BackgroundColor3, b.Text = UDim2.new(0, 88, 0, 28), Color3.fromRGB(48, 28, 40), label
+	b.Font, b.TextSize, b.TextColor3, b.Parent = Enum.Font.GothamBold, 12, COL_MUTED, chipBar
+	Instance.new("UICorner", b).CornerRadius = UDim.new(1, 0)
+	chips[id] = b
+	b.MouseButton1Click:Connect(function() currentCat = id refreshUI() end)
 end
+makeChip("all", "all") makeChip("move", "move") makeChip("esp", "esp") makeChip("players", "players") makeChip("extra", "extra")
 
-tabMove.MouseButton1Click:Connect(function() switchTab("MOVE") end)
-tabESP.MouseButton1Click:Connect(function() switchTab("ESP") end)
-tabTP.MouseButton1Click:Connect(function() switchTab("TP") end)
-tabAttach.MouseButton1Click:Connect(function() switchTab("ATTACH") end)
+local list = Instance.new("ScrollingFrame")
+list.Size, list.Position, list.BackgroundTransparency = UDim2.new(1, -24, 1, -196), UDim2.new(0, 12, 0, 142), 1
+list.ScrollBarThickness, list.CanvasSize, list.Parent = 4, UDim2.new(0, 0, 0, 0), main
+local listLay = Instance.new("UIListLayout")
+listLay.Padding, listLay.SortOrder, listLay.Parent = UDim.new(0, 7), Enum.SortOrder.LayoutOrder, list
 
-local function createMoveBtn(text, y)
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(1, 0, 0, 44)
-	btn.Position = UDim2.new(0, 0, 0, y)
-	btn.Text = text
-	btn.Font = Enum.Font.GothamBold
-	btn.TextSize = 15
-	btn.BackgroundColor3 = Color3.fromRGB(32, 20, 38)
-	btn.TextColor3 = Color3.fromRGB(255, 210, 230)
-	btn.Parent = pageMove
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 11)
-	return btn
-end
+local exec = Instance.new("TextBox")
+exec.Size, exec.Position = UDim2.new(1, -24, 0, 36), UDim2.new(0, 12, 1, -48)
+exec.BackgroundColor3, exec.PlaceholderText, exec.PlaceholderColor3 = COL_PANEL, "Execute command...", COL_MUTED
+exec.Text, exec.TextColor3, exec.Font, exec.TextSize, exec.Parent = "", COL_TEXT, Enum.Font.Gotham, 14, main
+Instance.new("UICorner", exec).CornerRadius = UDim.new(0, 10)
 
-local noclipBtn = createMoveBtn("NOCLIP : OFF", 8)
-local speedBtn = createMoveBtn("SPEED : OFF", 62)
-local jumpBtn = createMoveBtn("INFINITE JUMP : OFF", 116)
-local flyBtn = createMoveBtn("FLY : OFF (" .. flySpeed .. ")", 170)
+local commandDefs = {}
+local function addHeader(cat, title) commandDefs[#commandDefs+1] = {kind="header", cat=cat, title=title} end
+local function addCmd(cat, name, getter, runner) commandDefs[#commandDefs+1] = {kind="cmd", cat=cat, name=name, getter=getter, runner=runner} end
+local function stt(on) return on and "ON" or "OFF" end
 
-local sliderFrame = Instance.new("Frame")
-sliderFrame.Size = UDim2.new(1, 0, 0, 30)
-sliderFrame.Position = UDim2.new(0, 0, 0, 235)
-sliderFrame.BackgroundColor3 = Color3.fromRGB(40, 25, 48)
-sliderFrame.Parent = pageMove
-Instance.new("UICorner", sliderFrame).CornerRadius = UDim.new(0, 15)
-
-local sliderFill = Instance.new("Frame")
-sliderFill.Size = UDim2.new(flySpeed / 500, 0, 1, 0)
-sliderFill.BackgroundColor3 = Color3.fromRGB(255, 105, 180)
-sliderFill.Parent = sliderFrame
-Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(0, 15)
-
-local sliderKnob = Instance.new("TextButton")
-sliderKnob.Size = UDim2.new(0, 28, 0, 28)
-sliderKnob.Position = UDim2.new(sliderFill.Size.X.Scale - 0.05, 0, 0, 1)
-sliderKnob.BackgroundColor3 = Color3.fromRGB(255, 140, 200)
-sliderKnob.Text = ""
-sliderKnob.Parent = sliderFrame
-Instance.new("UICorner", sliderKnob).CornerRadius = UDim.new(1, 0)
-
-local draggingSlider = false
-sliderKnob.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = true end
-end)
-sliderKnob.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = false end
-end)
-
-local distLabel = Instance.new("TextLabel")
-distLabel.Size = UDim2.new(1, 0, 0, 25)
-distLabel.Position = UDim2.new(0, 0, 0, 8)
-distLabel.BackgroundTransparency = 1
-distLabel.Text = "Distance Max : " .. maxDistance
-distLabel.TextColor3 = Color3.fromRGB(255, 200, 220)
-distLabel.Font = Enum.Font.Gotham
-distLabel.TextSize = 15
-distLabel.Parent = pageESP
-
-local distBox = Instance.new("TextBox")
-distBox.Size = UDim2.new(1, 0, 0, 36)
-distBox.Position = UDim2.new(0, 0, 0, 38)
-distBox.BackgroundColor3 = Color3.fromRGB(35, 22, 42)
-distBox.Text = tostring(maxDistance)
-distBox.TextColor3 = Color3.fromRGB(255, 210, 230)
-distBox.Font = Enum.Font.Gotham
-distBox.TextSize = 15
-distBox.Parent = pageESP
-Instance.new("UICorner", distBox).CornerRadius = UDim.new(0, 9)
-
-distBox.FocusLost:Connect(function()
-	local num = tonumber(distBox.Text)
-	if num and num > 0 then
-		maxDistance = num
-		distLabel.Text = "Distance Max : " .. maxDistance
-	end
-end)
-
-local hlBtn = Instance.new("TextButton")
-hlBtn.Size = UDim2.new(1, 0, 0, 44)
-hlBtn.Position = UDim2.new(0, 0, 0, 90)
-hlBtn.Text = "HIGHLIGHTS : ON"
-hlBtn.Font = Enum.Font.GothamBold
-hlBtn.TextSize = 15
-hlBtn.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
-hlBtn.TextColor3 = Color3.new(1, 1, 1)
-hlBtn.Parent = pageESP
-Instance.new("UICorner", hlBtn).CornerRadius = UDim.new(0, 11)
-
-local nameBtn = Instance.new("TextButton")
-nameBtn.Size = UDim2.new(1, 0, 0, 44)
-nameBtn.Position = UDim2.new(0, 0, 0, 148)
-nameBtn.Text = "NAMES : ON"
-nameBtn.Font = Enum.Font.GothamBold
-nameBtn.TextSize = 15
-nameBtn.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
-nameBtn.TextColor3 = Color3.new(1, 1, 1)
-nameBtn.Parent = pageESP
-Instance.new("UICorner", nameBtn).CornerRadius = UDim.new(0, 11)
-
-local tpSearch = Instance.new("TextBox")
-tpSearch.Size = UDim2.new(1, 0, 0, 36)
-tpSearch.Position = UDim2.new(0, 0, 0, 5)
-tpSearch.BackgroundColor3 = Color3.fromRGB(35, 22, 42)
-tpSearch.PlaceholderText = "Rechercher un joueur..."
-tpSearch.PlaceholderColor3 = Color3.fromRGB(160, 130, 150)
-tpSearch.Text = ""
-tpSearch.TextColor3 = Color3.fromRGB(255, 210, 230)
-tpSearch.Font = Enum.Font.Gotham
-tpSearch.TextSize = 14
-tpSearch.ClearTextOnFocus = false
-tpSearch.Parent = pageTP
-Instance.new("UICorner", tpSearch).CornerRadius = UDim.new(0, 9)
-
-local tpScroll = Instance.new("ScrollingFrame")
-tpScroll.Size = UDim2.new(1, 0, 1, -50)
-tpScroll.Position = UDim2.new(0, 0, 0, 50)
-tpScroll.BackgroundColor3 = Color3.fromRGB(24, 15, 30)
-tpScroll.BorderSizePixel = 0
-tpScroll.ScrollBarThickness = 5
-tpScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-tpScroll.Parent = pageTP
-Instance.new("UICorner", tpScroll).CornerRadius = UDim.new(0, 9)
-
-local tpList = Instance.new("UIListLayout")
-tpList.SortOrder = Enum.SortOrder.Name
-tpList.Padding = UDim.new(0, 5)
-tpList.Parent = tpScroll
-
-local attachSearch = Instance.new("TextBox")
-attachSearch.Size = UDim2.new(1, 0, 0, 36)
-attachSearch.Position = UDim2.new(0, 0, 0, 5)
-attachSearch.BackgroundColor3 = Color3.fromRGB(35, 22, 42)
-attachSearch.PlaceholderText = "Rechercher un joueur..."
-attachSearch.PlaceholderColor3 = Color3.fromRGB(160, 130, 150)
-attachSearch.Text = ""
-attachSearch.TextColor3 = Color3.fromRGB(255, 210, 230)
-attachSearch.Font = Enum.Font.Gotham
-attachSearch.TextSize = 14
-attachSearch.ClearTextOnFocus = false
-attachSearch.Parent = pageAttach
-Instance.new("UICorner", attachSearch).CornerRadius = UDim.new(0, 9)
-
-local attachScroll = Instance.new("ScrollingFrame")
-attachScroll.Size = UDim2.new(1, 0, 1, -100)
-attachScroll.Position = UDim2.new(0, 0, 0, 50)
-attachScroll.BackgroundColor3 = Color3.fromRGB(24, 15, 30)
-attachScroll.BorderSizePixel = 0
-attachScroll.ScrollBarThickness = 5
-attachScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-attachScroll.Parent = pageAttach
-Instance.new("UICorner", attachScroll).CornerRadius = UDim.new(0, 9)
-
-local attachList = Instance.new("UIListLayout")
-attachList.SortOrder = Enum.SortOrder.Name
-attachList.Padding = UDim.new(0, 5)
-attachList.Parent = attachScroll
-
-local detachBtn = Instance.new("TextButton")
-detachBtn.Size = UDim2.new(1, 0, 0, 42)
-detachBtn.Position = UDim2.new(0, 0, 1, -48)
-detachBtn.Text = "DETACHER (X)"
-detachBtn.Font = Enum.Font.GothamBold
-detachBtn.TextSize = 15
-detachBtn.BackgroundColor3 = Color3.fromRGB(60, 30, 50)
-detachBtn.TextColor3 = Color3.fromRGB(255, 200, 220)
-detachBtn.Parent = pageAttach
-Instance.new("UICorner", detachBtn).CornerRadius = UDim.new(0, 11)
-
-local function createTPButton(player)
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(1, -8, 0, 34)
-	btn.BackgroundColor3 = Color3.fromRGB(40, 25, 48)
-	btn.Text = "->  " .. player.Name
-	btn.TextColor3 = Color3.fromRGB(255, 210, 230)
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 14
-	btn.TextXAlignment = Enum.TextXAlignment.Left
-	btn.Parent = tpScroll
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
-
-	btn.MouseButton1Click:Connect(function()
-		local myChar = LocalPlayer.Character
-		local targetChar = player.Character
-		if myChar and myChar.PrimaryPart and targetChar and targetChar.PrimaryPart then
-			myChar:PivotTo(targetChar.PrimaryPart.CFrame + Vector3.new(0, 3, 0))
-			if flyEnabled then
-				task.delay(0.25, startFly)
-			end
-		end
-	end)
-end
-
-local function refreshTP(filter)
-	for _, c in ipairs(tpScroll:GetChildren()) do
-		if c:IsA("TextButton") then c:Destroy() end
-	end
-	filter = filter and string.lower(filter) or ""
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= LocalPlayer then
-			if filter == "" or string.find(string.lower(p.Name), filter, 1, true) then
-				createTPButton(p)
-			end
-		end
-	end
-	tpScroll.CanvasSize = UDim2.new(0, 0, 0, tpList.AbsoluteContentSize.Y + 10)
-end
-
-local function createAttachButton(player)
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(1, -8, 0, 34)
-	btn.BackgroundColor3 = Color3.fromRGB(40, 25, 48)
-	btn.Text = "->  " .. player.Name
-	btn.TextColor3 = Color3.fromRGB(255, 210, 230)
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 14
-	btn.TextXAlignment = Enum.TextXAlignment.Left
-	btn.Parent = attachScroll
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
-	btn.MouseButton1Click:Connect(function()
-		AttachToPlayer(player)
-	end)
-end
-
-local function refreshAttach(filter)
-	for _, c in ipairs(attachScroll:GetChildren()) do
-		if c:IsA("TextButton") then c:Destroy() end
-	end
-	filter = filter and string.lower(filter) or ""
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= LocalPlayer then
-			if filter == "" or string.find(string.lower(p.Name), filter, 1, true) then
-				createAttachButton(p)
-			end
-		end
-	end
-	attachScroll.CanvasSize = UDim2.new(0, 0, 0, attachList.AbsoluteContentSize.Y + 10)
-end
-
-noclipBtn.MouseButton1Click:Connect(function()
-	noclip = not noclip
-	noclipBtn.Text = noclip and "NOCLIP : ON" or "NOCLIP : OFF"
-	noclipBtn.BackgroundColor3 = noclip and Color3.fromRGB(0, 140, 80) or Color3.fromRGB(32, 20, 38)
-	if noclip then startNoclip() else stopNoclip() end
-end)
-
-speedBtn.MouseButton1Click:Connect(function()
-	speedEnabled = not speedEnabled
-	if humanoid then
-		humanoid.WalkSpeed = speedEnabled and (turbo and 100 or 50) or 16
-	end
-	speedBtn.Text = speedEnabled and "SPEED : ON" or "SPEED : OFF"
-	speedBtn.BackgroundColor3 = speedEnabled and Color3.fromRGB(0, 140, 80) or Color3.fromRGB(32, 20, 38)
-end)
-
-jumpBtn.MouseButton1Click:Connect(function()
-	infiniteJump = not infiniteJump
-	jumpBtn.Text = infiniteJump and "INFINITE JUMP : ON" or "INFINITE JUMP : OFF"
-	jumpBtn.BackgroundColor3 = infiniteJump and Color3.fromRGB(0, 140, 80) or Color3.fromRGB(32, 20, 38)
-end)
-
-flyBtn.MouseButton1Click:Connect(function()
+addHeader("move", "MOVE")
+addCmd("move", "noclip", function() return stt(noclip) end, function() noclip = not noclip if noclip then startNoclip() else stopNoclip() end end)
+addCmd("move", "speed", function() return stt(speedEnabled) end, function() speedEnabled = not speedEnabled if speedEnabled then startSpeed() else stopSpeed() end end)
+addCmd("move", "speed value", function() return tostring(walkSpeed) end, function() end)
+addCmd("move", "speed +10", function() return tostring(walkSpeed) end, function() walkSpeed = math.clamp(walkSpeed + 10, 16, 300) end)
+addCmd("move", "speed -10", function() return tostring(walkSpeed) end, function() walkSpeed = math.clamp(walkSpeed - 10, 16, 300) end)
+addCmd("move", "infinite jump", function() return stt(infiniteJump) end, function() infiniteJump = not infiniteJump end)
+addCmd("move", "fly", function() return stt(flyEnabled) end, function()
 	flyEnabled = not flyEnabled
-	flyBtn.Text = flyEnabled and ("FLY : ON (" .. flySpeed .. ")") or ("FLY : OFF (" .. flySpeed .. ")")
-	flyBtn.BackgroundColor3 = flyEnabled and Color3.fromRGB(0, 140, 80) or Color3.fromRGB(32, 20, 38)
-	if flyEnabled then startFly() else stopFly() end
+	if flyEnabled then startFly() else stopFly() if speedEnabled then startSpeed() end end
 end)
+addCmd("move", "fly speed", function() return tostring(flySpeed) end, function() end)
+addCmd("move", "fly speed +10", function() return tostring(flySpeed) end, function() flySpeed = math.clamp(flySpeed + 10, 10, 500) end)
+addCmd("move", "fly speed -10", function() return tostring(flySpeed) end, function() flySpeed = math.clamp(flySpeed - 10, 10, 500) end)
 
-hlBtn.MouseButton1Click:Connect(function()
+addHeader("esp", "ESP")
+addCmd("esp", "highlights", function() return stt(highlightsEnabled) end, function()
 	highlightsEnabled = not highlightsEnabled
-	hlBtn.Text = highlightsEnabled and "HIGHLIGHTS : ON" or "HIGHLIGHTS : OFF"
-	hlBtn.BackgroundColor3 = highlightsEnabled and Color3.fromRGB(0, 140, 80) or Color3.fromRGB(160, 40, 60)
-	if not highlightsEnabled then
-		for _, p in ipairs(Players:GetPlayers()) do
-			if p ~= LocalPlayer then removeHighlight(p) end
-		end
-	end
+	if not highlightsEnabled then for _, p in ipairs(Players:GetPlayers()) do if p ~= LocalPlayer then removeHighlight(p) end end end
 end)
-
-nameBtn.MouseButton1Click:Connect(function()
+addCmd("esp", "names", function() return stt(namesEnabled) end, function()
 	namesEnabled = not namesEnabled
-	nameBtn.Text = namesEnabled and "NAMES : ON" or "NAMES : OFF"
-	nameBtn.BackgroundColor3 = namesEnabled and Color3.fromRGB(0, 140, 80) or Color3.fromRGB(160, 40, 60)
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer then
 			local char = p.Character
-			if char then
-				local tag = char:FindFirstChild("VolcanoNameTag")
-				if tag then tag:Destroy() end
-			end
+			local tag = char and char:FindFirstChild("VolcanoNameTag")
+			if tag then tag:Destroy() end
 			if namesEnabled then createNameTag(p) end
 		end
 	end
 end)
-
-detachBtn.MouseButton1Click:Connect(StopAttach)
-
-tpSearch:GetPropertyChangedSignal("Text"):Connect(function()
-	refreshTP(tpSearch.Text)
-end)
-attachSearch:GetPropertyChangedSignal("Text"):Connect(function()
-	refreshAttach(attachSearch.Text)
-end)
-
-RunService.RenderStepped:Connect(function()
-	if draggingSlider then
-		local mouse = UIS:GetMouseLocation()
-		local pos = sliderFrame.AbsolutePosition
-		local size = sliderFrame.AbsoluteSize
-		local relative = math.clamp(mouse.X - pos.X, 0, size.X)
-		local scale = relative / size.X
-		flySpeed = math.floor(scale * 490 + 10)
-		sliderFill.Size = UDim2.new(scale, 0, 1, 0)
-		sliderKnob.Position = UDim2.new(scale - 0.05, 0, 0, 1)
-		flyBtn.Text = (flyEnabled and "FLY : ON (" or "FLY : OFF (") .. flySpeed .. ")"
+addCmd("esp", "vie joueurs", function() return stt(healthEnabled) end, function()
+	healthEnabled = not healthEnabled
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= LocalPlayer then removeHealthTag(p) if healthEnabled then createHealthTag(p) end end
 	end
-
-	hue = (hue + 0.004) % 1
-	local color = Color3.fromHSV(hue, 0.85, 1)
-	title.TextColor3 = color
-	border.Color = color
-	sliderFill.BackgroundColor3 = color
-	sliderKnob.BackgroundColor3 = color
 end)
+addCmd("esp", "ma vie", function() return stt(selfHealthEnabled) end, function()
+	selfHealthEnabled = not selfHealthEnabled
+	removeHealthTag(LocalPlayer)
+	if selfHealthEnabled then createHealthTag(LocalPlayer) end
+end)
+addCmd("esp", "distance max", function() return tostring(maxDistance) end, function() end)
+addCmd("esp", "distance +200", function() return tostring(maxDistance) end, function() maxDistance += 200 end)
+addCmd("esp", "distance -200", function() return tostring(maxDistance) end, function() maxDistance = math.max(200, maxDistance - 200) end)
+
+addHeader("extra", "EXTRA")
+addCmd("extra", "desactiver le script", function() return "END" end, function() end)
+
+local function makeRow(def)
+	if def.kind == "header" then
+		local lab = Instance.new("TextLabel")
+		lab.Size, lab.BackgroundTransparency, lab.Text = UDim2.new(1, 0, 0, 22), 1, def.title
+		lab.Font, lab.TextSize, lab.TextColor3, lab.TextXAlignment, lab.Parent = Enum.Font.GothamBold, 12, COL_MUTED, Enum.TextXAlignment.Left, list
+		return
+	end
+	local row = Instance.new("TextButton")
+	row.Size, row.BackgroundColor3, row.Text, row.Parent = UDim2.new(1, -4, 0, 44), COL_ROW, "", list
+	Instance.new("UICorner", row).CornerRadius = UDim.new(0, 10)
+	local name = Instance.new("TextLabel")
+	name.Size, name.Position, name.BackgroundTransparency = UDim2.new(1, -120, 1, 0), UDim2.new(0, 14, 0, 0), 1
+	name.Text, name.Font, name.TextSize, name.TextColor3, name.TextXAlignment, name.Parent = ": "..def.name, Enum.Font.Gotham, 15, COL_TEXT, Enum.TextXAlignment.Left, row
+	local valTxt = def.getter and def.getter() or ""
+	local val = Instance.new("TextLabel")
+	val.Size, val.Position = UDim2.new(0, 96, 0, 26), UDim2.new(1, -108, 0.5, -13)
+	val.BackgroundColor3, val.Text = Color3.fromRGB(55, 30, 45), valTxt
+	val.Font, val.TextSize, val.Parent = Enum.Font.GothamBold, 13, row
+	val.TextColor3 = valTxt == "ON" and Color3.fromRGB(120, 255, 180) or valTxt == "OFF" and Color3.fromRGB(255, 140, 160) or COL_ACCENT
+	Instance.new("UICorner", val).CornerRadius = UDim.new(0, 8)
+	row.MouseButton1Click:Connect(function()
+		if scriptAlive and def.runner then def.runner() end
+		refreshUI()
+	end)
+end
+
+local function pill(parent, txt, x, w, on, fn)
+	local b = Instance.new("TextButton")
+	b.Size, b.Position = UDim2.new(0, w, 0, 26), UDim2.new(1, x, 0.5, -13)
+	b.BackgroundColor3 = on and COL_ACCENT or Color3.fromRGB(55, 30, 45)
+	b.Text, b.Font, b.TextSize = txt, Enum.Font.GothamBold, 11
+	b.TextColor3 = on and Color3.fromRGB(40, 16, 28) or COL_ACCENT
+	b.Parent = parent
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+	b.MouseButton1Click:Connect(fn)
+end
+
+local function makeDetachBar()
+	local row = Instance.new("TextButton")
+	row.Size, row.BackgroundColor3, row.Text, row.Parent = UDim2.new(1, -4, 0, 40), Color3.fromRGB(70, 28, 48), "", list
+	Instance.new("UICorner", row).CornerRadius = UDim.new(0, 10)
+	local lab = Instance.new("TextLabel")
+	lab.Size, lab.BackgroundTransparency = UDim2.new(1, 0, 1, 0), 1
+	lab.Text = isAttached and ("DÉTACHER  —  " .. (currentTarget and currentTarget.Name or "") .. "  (X)") or "DÉTACHER  (X)"
+	lab.Font, lab.TextSize, lab.TextColor3, lab.Parent = Enum.Font.GothamBold, 14, COL_ACCENT, row
+	row.MouseButton1Click:Connect(StopAttach)
+
+	local mode = Instance.new("Frame")
+	mode.Size, mode.BackgroundColor3, mode.Parent = UDim2.new(1, -4, 0, 40), COL_ROW, list
+	Instance.new("UICorner", mode).CornerRadius = UDim.new(0, 10)
+	local t = Instance.new("TextLabel")
+	t.Size, t.Position, t.BackgroundTransparency = UDim2.new(0.28, 0, 1, 0), UDim2.new(0, 12, 0, 0), 1
+	t.Text, t.Font, t.TextSize, t.TextColor3, t.TextXAlignment = "mode attach", Enum.Font.Gotham, 13, COL_MUTED, Enum.TextXAlignment.Left
+	t.Parent = mode
+	pill(mode, "DOS", -286, 58, attachMode == "dos", function() attachMode = "dos" refreshUI() end)
+	pill(mode, "CERCLE", -222, 64, attachMode == "cercle", function() attachMode = "cercle" refreshUI() end)
+	pill(mode, "−", -150, 32, false, function() attachSpeed = math.clamp(math.floor((attachSpeed - 0.8) * 10 + 0.5) / 10, 1, 14) refreshUI() end)
+	local spd = Instance.new("TextLabel")
+	spd.Size, spd.Position = UDim2.new(0, 48, 0, 26), UDim2.new(1, -112, 0.5, -13)
+	spd.BackgroundColor3, spd.Text = Color3.fromRGB(55, 30, 45), tostring(attachSpeed)
+	spd.Font, spd.TextSize, spd.TextColor3, spd.Parent = Enum.Font.GothamBold, 12, COL_ACCENT, mode
+	Instance.new("UICorner", spd).CornerRadius = UDim.new(0, 8)
+	pill(mode, "+", -56, 32, false, function() attachSpeed = math.clamp(math.floor((attachSpeed + 0.8) * 10 + 0.5) / 10, 1, 14) refreshUI() end)
+end
+
+local function makePlayerRows(filter)
+	makeDetachBar()
+	local seen = {}
+	local pls = Players:GetPlayers()
+	for i = 1, #pls do
+		local p = pls[i]
+		if p ~= LocalPlayer and not seen[p.UserId] then
+			seen[p.UserId] = true
+			if filter == "" or string.find(string.lower(p.Name), filter, 1, true) then
+				local row = Instance.new("Frame")
+				row.Size, row.BackgroundColor3, row.Parent = UDim2.new(1, -4, 0, 46), COL_ROW, list
+				Instance.new("UICorner", row).CornerRadius = UDim.new(0, 12)
+				local name = Instance.new("TextLabel")
+				name.Size, name.Position, name.BackgroundTransparency = UDim2.new(1, -210, 1, 0), UDim2.new(0, 14, 0, 0), 1
+				name.Text = (currentTarget == p and "● " or "🌸 ") .. p.Name
+				name.Font, name.TextSize, name.TextColor3, name.TextXAlignment, name.Parent = Enum.Font.GothamMedium, 15, ESP_COLOR, Enum.TextXAlignment.Left, row
+				pill(row, "TP", -210, 58, false, function() TeleportTo(p) end)
+				pill(row, "ATTACH", -144, 64, currentTarget == p, function() AttachToPlayer(p) end)
+				pill(row, "DETACH", -72, 64, false, function() if currentTarget == p or isAttached then StopAttach() end end)
+			end
+		end
+	end
+end
+
+refreshUI = function()
+	local cat, q = currentCat, string.lower(search.Text)
+	for _, c in ipairs(list:GetChildren()) do
+		if not c:IsA("UIListLayout") then c:Destroy() end
+	end
+	for id, chip in pairs(chips) do
+		if id == cat then chip.BackgroundColor3, chip.TextColor3 = COL_ACCENT, Color3.fromRGB(40, 16, 28)
+		else chip.BackgroundColor3, chip.TextColor3 = Color3.fromRGB(48, 28, 40), COL_MUTED end
+	end
+	for i = 1, #commandDefs do
+		local def = commandDefs[i]
+		if cat == "all" or def.cat == cat then
+			if def.kind == "header" then
+				if q == "" then makeRow(def) end
+			elseif q == "" or string.find(string.lower(def.name), q, 1, true) then
+				makeRow(def)
+			end
+		end
+	end
+	if cat == "players" then makePlayerRows(q) end
+	list.CanvasSize = UDim2.new(0, 0, 0, listLay.AbsoluteContentSize.Y + 10)
+end
+
+local function UnloadScript()
+	if not scriptAlive then return end
+	scriptAlive = false
+	flyEnabled, noclip, speedEnabled, infiniteJump, turbo = false, false, false, false, false
+	highlightsEnabled, namesEnabled, healthEnabled, selfHealthEnabled = false, false, false, false
+	StopAttach() stopFly() stopNoclip() stopSpeed()
+	if humanoid then humanoid.WalkSpeed = 16 humanoid.PlatformStand = false end
+	clearAllESP()
+	for i = 1, #connections do pcall(function() connections[i]:Disconnect() end) end
+	table.clear(connections)
+	if gui then gui:Destroy() end
+end
+commandDefs[#commandDefs].runner = UnloadScript
+
+search:GetPropertyChangedSignal("Text"):Connect(refreshUI)
+exec.FocusLost:Connect(function(enter)
+	if not enter then return end
+	local q = string.lower(exec.Text)
+	if q == "x" or q == "detacher" or q == "detach" then StopAttach() exec.Text = "" refreshUI() return end
+	if q == "dos" then attachMode = "dos" exec.Text = "" refreshUI() return end
+	if q == "cercle" then attachMode = "cercle" exec.Text = "" refreshUI() return end
+	for i = 1, #commandDefs do
+		local def = commandDefs[i]
+		if def.kind == "cmd" and string.find(def.name, q, 1, true) then def.runner() exec.Text = "" refreshUI() return end
+	end
+end)
+closeBtn.MouseButton1Click:Connect(function() main.Visible = false end)
+endBtn.MouseButton1Click:Connect(UnloadScript)
 
 task.spawn(function()
-	while true do
-		if highlightsEnabled or namesEnabled then
-			updateESP()
-		end
-		task.wait(0.75)
+	while scriptAlive do
+		if highlightsEnabled or namesEnabled or healthEnabled or selfHealthEnabled then updateESP() end
+		task.wait(0.4)
 	end
 end)
 
-UIS.JumpRequest:Connect(function()
-	if infiniteJump and humanoid and humanoid.Parent then
+track(UIS.JumpRequest:Connect(function()
+	if scriptAlive and infiniteJump and humanoid and humanoid.Parent then
 		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 	end
-end)
-
-UIS.InputBegan:Connect(function(input, gp)
-	if gp then return end
-	if input.KeyCode == Enum.KeyCode.LeftShift then
-		turbo = true
-		if speedEnabled and humanoid then humanoid.WalkSpeed = 100 end
-	elseif input.KeyCode == Enum.KeyCode.X then
-		StopAttach()
-	elseif input.KeyCode == Enum.KeyCode.Insert or input.KeyCode == Enum.KeyCode.RightShift or input.KeyCode == Enum.KeyCode.F4 then
-		main.Visible = not main.Visible
-	end
-end)
-
-UIS.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.LeftShift then
-		turbo = false
-		if speedEnabled and humanoid then humanoid.WalkSpeed = 50 end
-	end
-end)
-
-closeBtn.MouseButton1Click:Connect(function()
-	main.Visible = false
-end)
+end))
+track(UIS.InputBegan:Connect(function(input)
+	if not scriptAlive then return end
+	local k = input.KeyCode
+	if k == Enum.KeyCode.X then StopAttach()
+	elseif k == Enum.KeyCode.Insert then main.Visible = not main.Visible
+	elseif k == Enum.KeyCode.End then UnloadScript()
+	elseif k == Enum.KeyCode.LeftShift then turbo = true end
+end))
+track(UIS.InputEnded:Connect(function(input)
+	if scriptAlive and input.KeyCode == Enum.KeyCode.LeftShift then turbo = false end
+end))
 
 local function setupPlayer(player)
 	if player == LocalPlayer then return end
-	player.CharacterAdded:Connect(function()
-		task.wait(0.6)
+	track(player.CharacterAdded:Connect(function()
+		task.wait(0.4)
+		if not scriptAlive then return end
 		if namesEnabled then createNameTag(player) end
-	end)
-	if player.Character and namesEnabled then
-		task.delay(0.4, function() createNameTag(player) end)
+		if healthEnabled then createHealthTag(player) end
+	end))
+	if player.Character then
+		if namesEnabled then createNameTag(player) end
+		if healthEnabled then createHealthTag(player) end
 	end
 end
 
 for _, p in ipairs(Players:GetPlayers()) do setupPlayer(p) end
-
-Players.PlayerAdded:Connect(function(p)
-	setupPlayer(p)
-	task.wait(0.5)
-	refreshTP(tpSearch.Text)
-	refreshAttach(attachSearch.Text)
-end)
-
-Players.PlayerRemoving:Connect(function(p)
+track(Players.PlayerAdded:Connect(setupPlayer))
+track(Players.PlayerRemoving:Connect(function(p)
 	if currentTarget == p then StopAttach() end
-	refreshTP(tpSearch.Text)
-	refreshAttach(attachSearch.Text)
-end)
+	if scriptAlive and currentCat == "players" then refreshUI() end
+end))
 
-refreshTP("")
-refreshAttach("")
-
-print("VOLCANO GAKURAN HUB charge !")
-print("-> Insert / RightShift / F4 pour ouvrir")
-print("-> X pour detacher")
+refreshUI()
+print("🌸 volcano gakuran 🌸 | by vulcalypse")
