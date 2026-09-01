@@ -9,6 +9,14 @@ local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 local ZERO = Vector3.zero
 local ESP_COLOR = Color3.fromRGB(64, 224, 208)
+local HIT_GREEN = Color3.fromRGB(30, 255, 90)
+local HIT_RED = Color3.fromRGB(255, 40, 55)
+
+local HEALTH_NEAR, HEALTH_FAR, HEALTH_HIDE = 18, 90, 160
+local HITBOX_RADIUS, HITBOX_DIST = 6.6, 140
+local FAN_SEGMENTS, FAN_ANGLE, FACE_ANGLE = 8, 100, 62
+local FAN_TRANS_GREEN, FAN_TRANS_RED = 0.42, 0.32
+local HIT_RANGE = 10
 
 local parentGui = gethui and gethui() or game:GetService("CoreGui")
 for _, v in ipairs(parentGui:GetChildren()) do
@@ -16,17 +24,26 @@ for _, v in ipairs(parentGui:GetChildren()) do
 end
 
 local highlightsEnabled, namesEnabled, healthEnabled, selfHealthEnabled = true, true, true, true
+local hitboxEnabled, combatEnabled = false, true
 local maxDistance, flySpeed, walkSpeed = 2000, 60, 100
 local noclip, infiniteJump, speedEnabled, flyEnabled, turbo = false, false, false, false, false
+local flyKey, noclipKey, waitingBind = Enum.KeyCode.G, Enum.KeyCode.N, nil
 local isAttached, currentTarget, attachConnection, wasFlyingBeforeAttach = false, nil, nil, false
 local attachMode, attachSpeed = "cercle", 5.2
 local ATTACH_Y, DOS_Z, ORBIT_RADIUS = 0.65, 2.05, 2.05
 local character, humanoid, rootPart
-local bodyVelocity, bodyGyro, flyConnection, noclipConnection, speedConnection
+local bodyVelocity, bodyGyro, flyConnection, noclipConnection, speedConnection, hitboxConnection
 local scriptAlive, lastESP = true, 0
 
 local connections, noclipParts = table.create(32), table.create(16)
+local lastHealth = {}
+local lastDealt, dealtStamp, lastAttack = 0, 0, 0
+local cachedUlt, cachedUltT = nil, 0
 local function track(c) connections[#connections+1] = c return c end
+
+local function keyName(k)
+	return k and k.Name or "?"
+end
 
 local function updateCharacter()
 	character = LocalPlayer.Character
@@ -65,6 +82,11 @@ local function startFly()
 		bodyVelocity.Velocity = move.Magnitude > 0 and move.Unit * (flySpeed * (turbo and 2.2 or 1)) or ZERO
 		bodyGyro.CFrame = cf
 	end)
+end
+
+local function toggleFly()
+	flyEnabled = not flyEnabled
+	if flyEnabled then startFly() else stopFly() if speedEnabled then startSpeed() end end
 end
 
 local function stopSpeed()
@@ -116,10 +138,161 @@ local function startNoclip()
 	end)
 end
 
+local function toggleNoclip()
+	noclip = not noclip
+	if noclip then startNoclip() else stopNoclip() end
+end
+
 local function hpCol(r)
-	if r > 0.6 then return Color3.fromRGB(80, 220, 120) end
-	if r > 0.3 then return Color3.fromRGB(255, 200, 70) end
-	return Color3.fromRGB(255, 70, 70)
+	if r > 0.6 then return Color3.fromRGB(255, 170, 200) end
+	if r > 0.3 then return Color3.fromRGB(255, 190, 90) end
+	return Color3.fromRGB(255, 80, 90)
+end
+
+local function healthFade(dist)
+	if dist <= HEALTH_NEAR then return 0 end
+	if dist >= HEALTH_HIDE then return 1 end
+	local t = (dist - HEALTH_NEAR) / (HEALTH_HIDE - HEALTH_NEAR)
+	return t * t
+end
+
+local CD_KEYS = {
+	"UltimateCooldown", "UltCooldown", "UltCD", "UltimateCD", "StyleCooldown",
+	"StyleCD", "M2Cooldown", "CritCooldown", "HeavyCooldown", "AbilityCooldown",
+	"Cooldown", "CD", "Ult", "Ultimate"
+}
+
+local function attrNum(inst, key)
+	if not inst then return nil end
+	local v = inst:GetAttribute(key)
+	if typeof(v) == "number" then return v end
+	return nil
+end
+
+local function looksLikeCD(name)
+	name = string.lower(name or "")
+	return string.find(name, "ult", 1, true)
+		or string.find(name, "style", 1, true)
+		or string.find(name, "m2", 1, true)
+		or string.find(name, "crit", 1, true)
+		or string.find(name, "heavy", 1, true)
+		or string.find(name, "cooldown", 1, true)
+		or name == "cd"
+end
+
+local function readNumberish(v)
+	if v:IsA("NumberValue") or v:IsA("IntValue") then return v.Value end
+	if v:IsA("StringValue") then return tonumber(v.Value) end
+	return nil
+end
+
+local function findUltCD()
+	local now = os.clock()
+	if now - cachedUltT < 0.35 then return cachedUlt end
+	cachedUltT = now
+	local player, char = LocalPlayer, LocalPlayer.Character
+	for i = 1, #CD_KEYS do
+		local a = attrNum(player, CD_KEYS[i]) or (char and attrNum(char, CD_KEYS[i]))
+		if a then cachedUlt = a return a end
+	end
+	local bag = player:FindFirstChild("Cooldowns") or (char and char:FindFirstChild("Cooldowns"))
+	if bag then
+		for _, d in ipairs(bag:GetChildren()) do
+			if looksLikeCD(d.Name) then
+				local n = readNumberish(d) or attrNum(d, "Cooldown") or attrNum(d, "Time")
+				if typeof(n) == "number" then cachedUlt = n return n end
+			end
+		end
+	end
+	cachedUlt = nil
+	return nil
+end
+
+local function formatUlt()
+	local cd = findUltCD()
+	if typeof(cd) ~= "number" then return "ULT ?" end
+	if cd <= 0.08 then return "ULT READY" end
+	if cd <= 20 then return string.format("ULT %.1fs", cd) end
+	return "ULT " .. tostring(math.floor(cd + 0.5)) .. "s"
+end
+
+local hitHud, hitDmgLab, hitCdLab
+
+local function hideHitHud()
+	if hitHud then hitHud.Visible = false end
+end
+
+local function showHitHud(amount)
+	if not combatEnabled or not hitHud then return end
+	hitDmgLab.Text = "+" .. tostring(amount)
+	hitCdLab.Text = formatUlt()
+	hitHud.Visible = true
+	hitHud.BackgroundTransparency = 0.18
+end
+
+local function isAttacking()
+	if UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return true end
+	if UIS:IsKeyDown(Enum.KeyCode.R) or UIS:IsKeyDown(Enum.KeyCode.T) then return true end
+	return os.clock() - lastAttack <= 0.55
+end
+
+local function canClaimHit(myRoot, root)
+	if not myRoot or not root then return false end
+	if not isAttacking() then return false end
+	local offset = root.Position - myRoot.Position
+	local flat = Vector3.new(offset.X, 0, offset.Z)
+	if flat.Magnitude > HIT_RANGE then return false end
+	local look = Vector3.new(myRoot.CFrame.LookVector.X, 0, myRoot.CFrame.LookVector.Z)
+	if look.Magnitude < 0.05 then return flat.Magnitude <= 4.5 end
+	return look.Unit:Dot(flat.Unit) >= 0.15
+end
+
+local function trackHits()
+	if not combatEnabled then return end
+	local attacking = isAttacking()
+	local myRoot = LocalPlayer.Character and LocalPlayer.Character.PrimaryPart
+	if not myRoot then return end
+	local bestAmt, bestDist = nil, 1e9
+	local listP = Players:GetPlayers()
+	for i = 1, #listP do
+		local p = listP[i]
+		if p ~= LocalPlayer then
+			local char = p.Character
+			local hum = char and char:FindFirstChildOfClass("Humanoid")
+			local root = char and (char.PrimaryPart or char:FindFirstChild("HumanoidRootPart"))
+			if hum and root then
+				local id = p.UserId
+				local hp = hum.Health
+				local prev = lastHealth[id]
+				if attacking and prev and hp < prev - 0.4 and canClaimHit(myRoot, root) then
+					local dist = (myRoot.Position - root.Position).Magnitude
+					if dist < bestDist then
+						bestDist = dist
+						bestAmt = math.floor((prev - hp) + 0.5)
+					end
+				end
+				lastHealth[id] = hp
+			end
+		end
+	end
+	if bestAmt then
+		lastDealt, dealtStamp = bestAmt, os.clock()
+		showHitHud(bestAmt)
+	end
+end
+
+local function updateCombatHud()
+	if not combatEnabled then hideHitHud() return end
+	trackHits()
+	if dealtStamp > 0 and os.clock() - dealtStamp < 1.8 then
+		if hitCdLab then hitCdLab.Text = formatUlt() end
+		local t = (os.clock() - dealtStamp) / 1.8
+		if t > 0.65 and hitHud then
+			hitHud.BackgroundTransparency = 0.18 + (t - 0.65) / 0.35 * 0.82
+		end
+	else
+		hideHitHud()
+	end
 end
 
 local function updateHealthTag(player)
@@ -128,34 +301,77 @@ local function updateHealthTag(player)
 	local tag = char:FindFirstChild("VolcanoHealthTag")
 	local hum = char:FindFirstChildOfClass("Humanoid")
 	if not tag or not hum then return end
-	local fill = tag.BarBg and tag.BarBg:FindFirstChild("Fill")
-	local label = tag:FindFirstChild("HPText")
+	local myRoot = LocalPlayer.Character and LocalPlayer.Character.PrimaryPart
+	local root = char.PrimaryPart or char:FindFirstChild("HumanoidRootPart")
+	local dist = 0
+	if myRoot and root then dist = (myRoot.Position - root.Position).Magnitude end
+	if dist >= HEALTH_HIDE and player ~= LocalPlayer then tag.Enabled = false return end
+	tag.Enabled = true
+	local fade = (player == LocalPlayer) and 0 or healthFade(dist)
+	local scale = player == LocalPlayer and 1 or math.clamp(1 - fade * 0.85, 0.18, 1)
+	tag.Size = UDim2.new(0, math.floor(118 * scale), 0, math.floor(28 * scale))
+	local wrap = tag:FindFirstChild("Wrap")
+	if wrap then
+		wrap.BackgroundTransparency = 0.12 + fade * 0.82
+		local stroke = wrap:FindFirstChildOfClass("UIStroke")
+		if stroke then stroke.Transparency = 0.15 + fade * 0.85 end
+		for _, child in ipairs(wrap:GetChildren()) do
+			if child:IsA("TextLabel") then
+				child.TextTransparency = fade
+				child.TextStrokeTransparency = 0.35 + fade * 0.65
+			end
+		end
+	end
+	local fill = wrap and wrap:FindFirstChild("BarBg") and wrap.BarBg:FindFirstChild("Fill")
+	local bg = wrap and wrap:FindFirstChild("BarBg")
+	local label = wrap and wrap:FindFirstChild("HPText")
 	local ratio = hum.Health / math.max(hum.MaxHealth, 1)
 	if ratio < 0 then ratio = 0 elseif ratio > 1 then ratio = 1 end
 	local col = hpCol(ratio)
-	if fill then fill.Size = UDim2.new(ratio, 0, 1, 0) fill.BackgroundColor3 = col end
-	if label then label.Text = math.floor(hum.Health + 0.5) .. " / " .. math.floor(hum.MaxHealth + 0.5) label.TextColor3 = col end
+	if bg then bg.BackgroundTransparency = fade * 0.7 end
+	if fill then
+		fill.Size = UDim2.new(ratio, 0, 1, 0)
+		fill.BackgroundColor3 = col
+		fill.BackgroundTransparency = fade * 0.6
+	end
+	if label then
+		label.Text = math.floor(hum.Health + 0.5) .. "/" .. math.floor(hum.MaxHealth + 0.5)
+		label.TextColor3 = col
+		label.Visible = fade < 0.55
+	end
 end
 
 local function createHealthTag(player)
-	if player == LocalPlayer then if not selfHealthEnabled then return end elseif not healthEnabled then return end
+	if player == LocalPlayer then
+		if not selfHealthEnabled then return end
+	elseif not healthEnabled then
+		return
+	end
 	local char = player.Character
 	if not char or char:FindFirstChild("VolcanoHealthTag") then return end
 	local head = char:FindFirstChild("Head")
 	if not head then return end
 	local bb = Instance.new("BillboardGui")
-	bb.Name, bb.Adornee, bb.Size = "VolcanoHealthTag", head, UDim2.new(4.2, 0, 1.15, 0)
-	bb.StudsOffset, bb.AlwaysOnTop, bb.MaxDistance = Vector3.new(0, 2.55, 0), true, 1e5
+	bb.Name, bb.Adornee, bb.Size = "VolcanoHealthTag", head, UDim2.new(0, 118, 0, 28)
+	bb.StudsOffset, bb.AlwaysOnTop, bb.MaxDistance, bb.ResetOnSpawn = Vector3.new(0, 2.15, 0), true, HEALTH_HIDE, false
+	local wrap = Instance.new("Frame")
+	wrap.Name, wrap.Size, wrap.BackgroundColor3, wrap.BackgroundTransparency, wrap.BorderSizePixel, wrap.Parent = "Wrap", UDim2.new(1, 0, 1, 0), Color3.fromRGB(36, 18, 28), 0.12, 0, bb
+	Instance.new("UICorner", wrap).CornerRadius = UDim.new(1, 0)
+	local stroke = Instance.new("UIStroke")
+	stroke.Color, stroke.Thickness, stroke.Transparency, stroke.Parent = Color3.fromRGB(255, 150, 190), 1.2, 0.15, wrap
+	local left = Instance.new("TextLabel")
+	left.Size, left.Position, left.BackgroundTransparency, left.Text, left.TextScaled, left.Font, left.Parent = UDim2.new(0, 16, 1, 0), UDim2.new(0, 2, 0, 0), 1, "🌸", true, Enum.Font.GothamBold, wrap
+	local right = Instance.new("TextLabel")
+	right.Size, right.Position, right.BackgroundTransparency, right.Text, right.TextScaled, right.Font, right.Parent = UDim2.new(0, 16, 1, 0), UDim2.new(1, -18, 0, 0), 1, "🌸", true, Enum.Font.GothamBold, wrap
 	local bg = Instance.new("Frame")
-	bg.Name, bg.Size, bg.Position = "BarBg", UDim2.new(0.92, 0, 0.32, 0), UDim2.new(0.04, 0, 0.08, 0)
-	bg.BackgroundColor3, bg.BorderSizePixel, bg.Parent = Color3.fromRGB(28, 16, 24), 0, bb
-	Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 4)
+	bg.Name, bg.Size, bg.Position, bg.BackgroundColor3, bg.BorderSizePixel, bg.Parent = "BarBg", UDim2.new(1, -40, 0, 7), UDim2.new(0, 20, 0, 5), Color3.fromRGB(22, 10, 16), 0, wrap
+	Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
 	local fill = Instance.new("Frame")
-	fill.Name, fill.Size, fill.BackgroundColor3, fill.BorderSizePixel, fill.Parent = "Fill", UDim2.new(1, 0, 1, 0), Color3.fromRGB(80, 220, 120), 0, bg
-	Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 4)
-	local t = Instance.new("TextLabel")
-	t.Name, t.Size, t.Position = "HPText", UDim2.new(1, 0, 0.55, 0), UDim2.new(0, 0, 0.42, 0)
-	t.BackgroundTransparency, t.Font, t.TextScaled, t.TextStrokeTransparency, t.Parent = 1, Enum.Font.GothamBold, true, 0, bb
+	fill.Name, fill.Size, fill.BackgroundColor3, fill.BorderSizePixel, fill.Parent = "Fill", UDim2.new(1, 0, 1, 0), Color3.fromRGB(255, 170, 200), 0, bg
+	Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+	local hp = Instance.new("TextLabel")
+	hp.Name, hp.Size, hp.Position, hp.BackgroundTransparency, hp.Font, hp.TextSize = "HPText", UDim2.new(1, -36, 0, 12), UDim2.new(0, 18, 0, 13), 1, Enum.Font.GothamBold, 10
+	hp.TextStrokeTransparency, hp.TextColor3, hp.Text, hp.Parent = 0.35, Color3.fromRGB(255, 170, 200), "0/0", wrap
 	bb.Parent = char
 	updateHealthTag(player)
 end
@@ -173,8 +389,8 @@ local function createNameTag(player)
 	local head = char:FindFirstChild("Head")
 	if not head then return end
 	local bb = Instance.new("BillboardGui")
-	bb.Name, bb.Adornee, bb.Size = "VolcanoNameTag", head, UDim2.new(4, 0, 1.4, 0)
-	bb.StudsOffset, bb.AlwaysOnTop, bb.MaxDistance = Vector3.new(0, 3.6, 0), true, maxDistance
+	bb.Name, bb.Adornee, bb.Size = "VolcanoNameTag", head, UDim2.new(4, 0, 1.15, 0)
+	bb.StudsOffset, bb.AlwaysOnTop, bb.MaxDistance = Vector3.new(0, 3.15, 0), true, maxDistance
 	local t = Instance.new("TextLabel")
 	t.Size, t.BackgroundTransparency, t.Text = UDim2.new(1, 0, 1, 0), 1, "🌸 " .. player.Name
 	t.TextColor3, t.TextStrokeTransparency, t.TextScaled, t.Font, t.Parent = ESP_COLOR, 0, true, Enum.Font.GothamBold, bb
@@ -195,33 +411,201 @@ local function removeHighlight(player)
 	if hl then hl:Destroy() end
 end
 
+local function styleHitPart(p, color, trans)
+	p.Anchored = false
+	p.CanCollide = false
+	p.CanQuery = false
+	p.CanTouch = false
+	p.CastShadow = false
+	p.Massless = true
+	p.Material = Enum.Material.SmoothPlastic
+	p.Color = color
+	p.Transparency = trans
+end
+
+local function isFacingMe(hrp)
+	local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+	if not myRoot then return false end
+	local toMe = myRoot.Position - hrp.Position
+	toMe = Vector3.new(toMe.X, 0, toMe.Z)
+	local look = Vector3.new(hrp.CFrame.LookVector.X, 0, hrp.CFrame.LookVector.Z)
+	if toMe.Magnitude < 0.2 or look.Magnitude < 0.05 then return false end
+	return look.Unit:Dot(toMe.Unit) >= math.cos(math.rad(FACE_ANGLE))
+end
+
+local rayParams = RaycastParams.new()
+rayParams.FilterType = Enum.RaycastFilterType.Exclude
+local groundCache = {}
+
+local function hitboxName(player)
+	return "VolcanoHitbox_" .. tostring(player.UserId)
+end
+
+local function getHitbox(player)
+	return workspace:FindFirstChild(hitboxName(player))
+end
+
+local function groundYOffset(hrp, char, player)
+	local now = os.clock()
+	local cached = groundCache[player]
+	if cached and (now - cached.t) < 0.2 then
+		return cached.off
+	end
+	rayParams.FilterDescendantsInstances = {char, getHitbox(player)}
+	local hit = workspace:Raycast(hrp.Position + Vector3.new(0, 1.2, 0), Vector3.new(0, -10, 0), rayParams)
+	local off
+	if hit then
+		off = (hit.Position.Y + 0.03) - hrp.Position.Y
+	else
+		off = -3.05
+	end
+	groundCache[player] = {off = off, t = now}
+	return off
+end
+
+local function removeHitbox(player)
+	local folder = workspace:FindFirstChild(hitboxName(player))
+	if folder then folder:Destroy() end
+	local char = player.Character
+	local old = char and char:FindFirstChild("VolcanoHitbox")
+	if old then old:Destroy() end
+end
+
+local function createHitbox(player)
+	if player == LocalPlayer then return end
+	if getHitbox(player) then return end
+	local char = player.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if not hrp then return end
+	local folder = Instance.new("Folder")
+	folder.Name = hitboxName(player)
+	folder.Parent = workspace
+	local step = FAN_ANGLE / FAN_SEGMENTS
+	local width = 2 * HITBOX_RADIUS * math.tan(math.rad(step * 0.58))
+	for i = 1, FAN_SEGMENTS do
+		local w = Instance.new("WedgePart")
+		w.Name = "Fan" .. i
+		w.Size = Vector3.new(width, 0.04, HITBOX_RADIUS)
+		styleHitPart(w, HIT_GREEN, FAN_TRANS_GREEN)
+		w.Parent = folder
+		local weld = Instance.new("Weld")
+		weld.Name = "W"
+		weld.Part0 = hrp
+		weld.Part1 = w
+		weld.Parent = w
+	end
+end
+
+local function updateHitbox(player)
+	if player == LocalPlayer then removeHitbox(player) return end
+	local char = player.Character
+	local folder = getHitbox(player)
+	local hrp = char and char:FindFirstChild("HumanoidRootPart")
+	if not folder or not hrp then return end
+	local yOff = groundYOffset(hrp, char, player)
+	local facing = isFacingMe(hrp)
+	local col = facing and HIT_RED or HIT_GREEN
+	local fanTrans = facing and FAN_TRANS_RED or FAN_TRANS_GREEN
+	local step = FAN_ANGLE / FAN_SEGMENTS
+	local startAng = -FAN_ANGLE * 0.5
+	for i = 1, FAN_SEGMENTS do
+		local fan = folder:FindFirstChild("Fan" .. i)
+		if fan then
+			local weld = fan:FindFirstChild("W")
+			local mid = math.rad(startAng + (i - 0.5) * step)
+			if weld then
+				weld.C0 = CFrame.new(0, yOff, 0) * CFrame.Angles(0, mid, 0) * CFrame.new(0, 0, -HITBOX_RADIUS * 0.5)
+			end
+			if fan.Color ~= col then fan.Color = col end
+			if fan.Transparency ~= fanTrans then fan.Transparency = fanTrans end
+		end
+	end
+end
+
+local function clearAllHitboxes()
+	for _, p in ipairs(Players:GetPlayers()) do removeHitbox(p) end
+	for _, v in ipairs(workspace:GetChildren()) do
+		if typeof(v.Name) == "string" and string.sub(v.Name, 1, 14) == "VolcanoHitbox_" then
+			v:Destroy()
+		end
+	end
+	table.clear(groundCache)
+end
+
+local function stopHitbox()
+	if hitboxConnection then hitboxConnection:Disconnect() hitboxConnection = nil end
+	clearAllHitboxes()
+end
+
+local function startHitbox()
+	stopHitbox()
+	local acc = 0
+	hitboxConnection = RunService.Heartbeat:Connect(function(dt)
+		if not (scriptAlive and hitboxEnabled) then return end
+		acc += dt
+		if acc < 0.08 then return end
+		acc = 0
+		local myRoot = LocalPlayer.Character and LocalPlayer.Character.PrimaryPart
+		if not myRoot then return end
+		local pos = myRoot.Position
+		removeHitbox(LocalPlayer)
+		local listP = Players:GetPlayers()
+		for i = 1, #listP do
+			local p = listP[i]
+			if p ~= LocalPlayer then
+				local char = p.Character
+				local root = char and char:FindFirstChild("HumanoidRootPart")
+				if root and (pos - root.Position).Magnitude <= HITBOX_DIST then
+					if not getHitbox(p) then createHitbox(p) end
+					updateHitbox(p)
+				else
+					removeHitbox(p)
+					groundCache[p] = nil
+				end
+			end
+		end
+	end)
+end
+
 local function clearAllESP()
 	for _, p in ipairs(Players:GetPlayers()) do
-		removeHighlight(p) removeHealthTag(p)
+		removeHighlight(p) removeHealthTag(p) removeHitbox(p)
 		local char = p.Character
-		local tag = char and char:FindFirstChild("VolcanoNameTag")
-		if tag then tag:Destroy() end
+		if char then
+			local tag = char:FindFirstChild("VolcanoNameTag")
+			if tag then tag:Destroy() end
+			local ctag = char:FindFirstChild("VolcanoCombatTag")
+			if ctag then ctag:Destroy() end
+		end
 	end
+	hideHitHud()
 end
 
 local function updateESP()
 	if not scriptAlive then return end
 	local now = os.clock()
-	if now - lastESP < 0.4 then return end
+	if now - lastESP < 0.25 then return end
 	lastESP = now
 	local myRoot = LocalPlayer.Character and LocalPlayer.Character.PrimaryPart
 	if not myRoot then return end
 	local pos = myRoot.Position
-	if selfHealthEnabled then createHealthTag(LocalPlayer) updateHealthTag(LocalPlayer) end
-	local listP = Players:GetPlayers()
-	for i = 1, #listP do
-		local p = listP[i]
+	if selfHealthEnabled then
+		if not (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("VolcanoHealthTag")) then
+			createHealthTag(LocalPlayer)
+		end
+		updateHealthTag(LocalPlayer)
+	end
+	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer then
 			local char = p.Character
 			local root = char and char.PrimaryPart
 			if root then
 				local ok = (pos - root.Position).Magnitude <= maxDistance
-				if highlightsEnabled then if ok then createHighlight(p) else removeHighlight(p) end else removeHighlight(p) end
+				if highlightsEnabled then
+					if ok then createHighlight(p) else removeHighlight(p) end
+				else
+					removeHighlight(p)
+				end
 				if namesEnabled then
 					if ok then createNameTag(p) else
 						local tag = char:FindFirstChild("VolcanoNameTag")
@@ -229,7 +613,12 @@ local function updateESP()
 					end
 				end
 				if healthEnabled then
-					if ok then createHealthTag(p) updateHealthTag(p) else removeHealthTag(p) end
+					if ok then
+						if not char:FindFirstChild("VolcanoHealthTag") then createHealthTag(p) end
+						updateHealthTag(p)
+					else
+						removeHealthTag(p)
+					end
 				end
 			end
 		end
@@ -254,6 +643,7 @@ local function onCharacterAdded(char)
 	if flyEnabled then startFly() end
 	if noclip then startNoclip() end
 	if selfHealthEnabled then createHealthTag(LocalPlayer) end
+	removeHitbox(LocalPlayer)
 end
 
 if LocalPlayer.Character then task.spawn(onCharacterAdded, LocalPlayer.Character) end
@@ -335,6 +725,22 @@ local gui = Instance.new("ScreenGui")
 gui.Name, gui.ResetOnSpawn, gui.IgnoreGuiInset, gui.DisplayOrder = "VolcanoGakuranHub", false, true, 99999
 gui.Parent = parentGui
 
+hitHud = Instance.new("Frame")
+hitHud.Name, hitHud.Size, hitHud.Position = "HitHud", UDim2.new(0, 168, 0, 54), UDim2.new(0.5, -84, 0.72, 0)
+hitHud.BackgroundColor3, hitHud.BackgroundTransparency, hitHud.BorderSizePixel = Color3.fromRGB(28, 16, 24), 0.18, 0
+hitHud.Visible, hitHud.Parent = false, gui
+Instance.new("UICorner", hitHud).CornerRadius = UDim.new(0, 10)
+local hitStroke = Instance.new("UIStroke")
+hitStroke.Color, hitStroke.Thickness, hitStroke.Transparency, hitStroke.Parent = COL_ACCENT, 1.2, 0.25, hitHud
+hitDmgLab = Instance.new("TextLabel")
+hitDmgLab.Size, hitDmgLab.BackgroundTransparency = UDim2.new(1, 0, 0, 28), 1
+hitDmgLab.Font, hitDmgLab.TextSize, hitDmgLab.TextColor3 = Enum.Font.GothamBold, 22, Color3.fromRGB(120, 255, 170)
+hitDmgLab.Text, hitDmgLab.Parent = "+0", hitHud
+hitCdLab = Instance.new("TextLabel")
+hitCdLab.Size, hitCdLab.Position, hitCdLab.BackgroundTransparency = UDim2.new(1, 0, 0, 20), UDim2.new(0, 0, 0, 28), 1
+hitCdLab.Font, hitCdLab.TextSize, hitCdLab.TextColor3 = Enum.Font.GothamBold, 13, Color3.fromRGB(255, 210, 140)
+hitCdLab.Text, hitCdLab.Parent = "ULT ?", hitHud
+
 local main = Instance.new("Frame")
 main.Size, main.Position = UDim2.new(0, 540, 0, 580), UDim2.new(0.5, -270, 0.5, -290)
 main.BackgroundColor3, main.BorderSizePixel = COL_BG, 0
@@ -409,16 +815,15 @@ local function addCmd(cat, name, getter, runner) commandDefs[#commandDefs+1] = {
 local function stt(on) return on and "ON" or "OFF" end
 
 addHeader("move", "MOVE")
-addCmd("move", "noclip", function() return stt(noclip) end, function() noclip = not noclip if noclip then startNoclip() else stopNoclip() end end)
+addCmd("move", "noclip", function() return stt(noclip) end, toggleNoclip)
+addCmd("move", "noclip key", function() return waitingBind == "noclip" and "..." or keyName(noclipKey) end, function() waitingBind = "noclip" end)
 addCmd("move", "speed", function() return stt(speedEnabled) end, function() speedEnabled = not speedEnabled if speedEnabled then startSpeed() else stopSpeed() end end)
 addCmd("move", "speed value", function() return tostring(walkSpeed) end, function() end)
 addCmd("move", "speed +10", function() return tostring(walkSpeed) end, function() walkSpeed = math.clamp(walkSpeed + 10, 16, 300) end)
 addCmd("move", "speed -10", function() return tostring(walkSpeed) end, function() walkSpeed = math.clamp(walkSpeed - 10, 16, 300) end)
 addCmd("move", "infinite jump", function() return stt(infiniteJump) end, function() infiniteJump = not infiniteJump end)
-addCmd("move", "fly", function() return stt(flyEnabled) end, function()
-	flyEnabled = not flyEnabled
-	if flyEnabled then startFly() else stopFly() if speedEnabled then startSpeed() end end
-end)
+addCmd("move", "fly", function() return stt(flyEnabled) end, toggleFly)
+addCmd("move", "fly key", function() return waitingBind == "fly" and "..." or keyName(flyKey) end, function() waitingBind = "fly" end)
 addCmd("move", "fly speed", function() return tostring(flySpeed) end, function() end)
 addCmd("move", "fly speed +10", function() return tostring(flySpeed) end, function() flySpeed = math.clamp(flySpeed + 10, 10, 500) end)
 addCmd("move", "fly speed -10", function() return tostring(flySpeed) end, function() flySpeed = math.clamp(flySpeed - 10, 10, 500) end)
@@ -450,6 +855,14 @@ addCmd("esp", "ma vie", function() return stt(selfHealthEnabled) end, function()
 	removeHealthTag(LocalPlayer)
 	if selfHealthEnabled then createHealthTag(LocalPlayer) end
 end)
+addCmd("esp", "degats / ultime", function() return stt(combatEnabled) end, function()
+	combatEnabled = not combatEnabled
+	if not combatEnabled then hideHitHud() end
+end)
+addCmd("esp", "hitbox vis", function() return stt(hitboxEnabled) end, function()
+	hitboxEnabled = not hitboxEnabled
+	if hitboxEnabled then startHitbox() else stopHitbox() end
+end)
 addCmd("esp", "distance max", function() return tostring(maxDistance) end, function() end)
 addCmd("esp", "distance +200", function() return tostring(maxDistance) end, function() maxDistance += 200 end)
 addCmd("esp", "distance -200", function() return tostring(maxDistance) end, function() maxDistance = math.max(200, maxDistance - 200) end)
@@ -475,7 +888,7 @@ local function makeRow(def)
 	val.Size, val.Position = UDim2.new(0, 96, 0, 26), UDim2.new(1, -108, 0.5, -13)
 	val.BackgroundColor3, val.Text = Color3.fromRGB(55, 30, 45), valTxt
 	val.Font, val.TextSize, val.Parent = Enum.Font.GothamBold, 13, row
-	val.TextColor3 = valTxt == "ON" and Color3.fromRGB(120, 255, 180) or valTxt == "OFF" and Color3.fromRGB(255, 140, 160) or COL_ACCENT
+	val.TextColor3 = valTxt == "ON" and Color3.fromRGB(120, 255, 180) or valTxt == "OFF" and Color3.fromRGB(255, 140, 160) or valTxt == "..." and Color3.fromRGB(255, 220, 120) or COL_ACCENT
 	Instance.new("UICorner", val).CornerRadius = UDim.new(0, 8)
 	row.MouseButton1Click:Connect(function()
 		if scriptAlive and def.runner then def.runner() end
@@ -503,7 +916,6 @@ local function makeDetachBar()
 	lab.Text = isAttached and ("DÉTACHER  —  " .. (currentTarget and currentTarget.Name or "") .. "  (X)") or "DÉTACHER  (X)"
 	lab.Font, lab.TextSize, lab.TextColor3, lab.Parent = Enum.Font.GothamBold, 14, COL_ACCENT, row
 	row.MouseButton1Click:Connect(StopAttach)
-
 	local mode = Instance.new("Frame")
 	mode.Size, mode.BackgroundColor3, mode.Parent = UDim2.new(1, -4, 0, 40), COL_ROW, list
 	Instance.new("UICorner", mode).CornerRadius = UDim.new(0, 10)
@@ -525,9 +937,7 @@ end
 local function makePlayerRows(filter)
 	makeDetachBar()
 	local seen = {}
-	local pls = Players:GetPlayers()
-	for i = 1, #pls do
-		local p = pls[i]
+	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= LocalPlayer and not seen[p.UserId] then
 			seen[p.UserId] = true
 			if filter == "" or string.find(string.lower(p.Name), filter, 1, true) then
@@ -573,8 +983,8 @@ local function UnloadScript()
 	if not scriptAlive then return end
 	scriptAlive = false
 	flyEnabled, noclip, speedEnabled, infiniteJump, turbo = false, false, false, false, false
-	highlightsEnabled, namesEnabled, healthEnabled, selfHealthEnabled = false, false, false, false
-	StopAttach() stopFly() stopNoclip() stopSpeed()
+	highlightsEnabled, namesEnabled, healthEnabled, selfHealthEnabled, hitboxEnabled, combatEnabled = false, false, false, false, false, false
+	StopAttach() stopFly() stopNoclip() stopSpeed() stopHitbox()
 	if humanoid then humanoid.WalkSpeed = 16 humanoid.PlatformStand = false end
 	clearAllESP()
 	for i = 1, #connections do pcall(function() connections[i]:Disconnect() end) end
@@ -601,7 +1011,8 @@ endBtn.MouseButton1Click:Connect(UnloadScript)
 task.spawn(function()
 	while scriptAlive do
 		if highlightsEnabled or namesEnabled or healthEnabled or selfHealthEnabled then updateESP() end
-		task.wait(0.4)
+		if combatEnabled then updateCombatHud() end
+		task.wait(combatEnabled and 0.06 or 0.25)
 	end
 end)
 
@@ -610,10 +1021,23 @@ track(UIS.JumpRequest:Connect(function()
 		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 	end
 end))
-track(UIS.InputBegan:Connect(function(input)
+track(UIS.InputBegan:Connect(function(input, gp)
 	if not scriptAlive then return end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then lastAttack = os.clock() end
 	local k = input.KeyCode
-	if k == Enum.KeyCode.X then StopAttach()
+	if k == Enum.KeyCode.Unknown then return end
+	if waitingBind then
+		if k ~= Enum.KeyCode.Escape and k ~= Enum.KeyCode.Insert and k ~= Enum.KeyCode.End then
+			if waitingBind == "fly" then flyKey = k else noclipKey = k end
+		end
+		waitingBind = nil
+		refreshUI()
+		return
+	end
+	if k == Enum.KeyCode.R or k == Enum.KeyCode.T then lastAttack = os.clock()
+	elseif k == flyKey then toggleFly() refreshUI()
+	elseif k == noclipKey then toggleNoclip() refreshUI()
+	elseif k == Enum.KeyCode.X then StopAttach()
 	elseif k == Enum.KeyCode.Insert then main.Visible = not main.Visible
 	elseif k == Enum.KeyCode.End then UnloadScript()
 	elseif k == Enum.KeyCode.LeftShift then turbo = true end
@@ -640,6 +1064,9 @@ for _, p in ipairs(Players:GetPlayers()) do setupPlayer(p) end
 track(Players.PlayerAdded:Connect(setupPlayer))
 track(Players.PlayerRemoving:Connect(function(p)
 	if currentTarget == p then StopAttach() end
+	removeHitbox(p)
+	groundCache[p] = nil
+	lastHealth[p.UserId] = nil
 	if scriptAlive and currentCat == "players" then refreshUI() end
 end))
 
